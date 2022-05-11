@@ -1,7 +1,7 @@
 /**
 *  Copyright 2022 Gary J. Milne
 *
-*  Version: v0.92\0.96C
+*  Version: v0.92A\0.97
 *
 *  This program is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@
 *  BULB - UNIQUE - CHANGELOG
 *  Version 0.91 - Internal version
 *  Version 0.92 - Added logic for extracting HSV values from color and updating the attributes on any change. Added hue, saturation and value attributes for Hubitat compatibility.
+*  Version 0.92A - Made ENUM fields for commands required and cleaned up error handling logic.
 *
 *  CORE - IDENTICAL - CHANGELOG
 *  All changes to code in the CORE section will be commented here. Changes to the UNIQUE section that are made across all drivers will also be commented here.
@@ -28,6 +29,7 @@
 *  Version 0.96A - Tweaks to formatting of logging.
 *  Version 0.96B - Added logging enhancements with HTML tags. Added blue highlight to key fields in preferences.
 *  Version 0.96C - Added handling for Tasmota "WARNING" message that occurs when authentication fails and possibly other scenarios.
+*  Version 0.97 - Added option in settings to disable use of HTML enhancements in logging. These do not show correctly on a secondary hub in a two+ hub environment. This option allows them to be disabled.
 *
 * Authors Notes:
 * You might be asking yourself, do we really need another Tasmota driver for Hubitat? It's a fair question as there are already multiple drivers available. By far the best is the "Tasmota Device Manager" by Markus Li.
@@ -38,12 +40,13 @@
 *     Tasmota Sync drivers are just that, drivers only. Each Tasmota device (IP address) will only have one entry in the driver table making it a little cleaner.
 *  3) Markus' implementation was quite chatty and would sync on changes and at each TelePeriod (usually every 5 minutes). 
 *     Tasmota Sync drivers only report on changes at the Tasmota device with the exception of the Power Management device which reports at the TelePeriod but ONLY if there has been a change.
-*  4) I also found that Markus' drivers were not always complete such as setting colorTemperature on a bulb. Markus' code was also very dense making changes difficult when combined with the App\Parent\Child architecture. Tasmota Sync drivers do not have this limitation and are more transparent in their design.
+*  4) I also found that Markus' drivers were not always complete such as setting colorTemperature on a bulb. Markus' code was also very dense making changes difficult when combined with the App\Parent\Child architecture. 
+*     All features of Tasmota Sync drivers are fully operational and the code is more straightfoward and approachable to non veteran coders without comprimising reliability of the driver.
 *
 *  Lastly, I had previously written much of this code for the Smartthings Classic environment and carried forward some useful elements such as saving and recalling favorite color and CT values and full support for Tasmota Fade.
-*  As Hubitat does not have the same UI that Smartthings Classic does I've done some innovatinve things with logging that make it much easier to troubleshoot problems should some arise.
+*  As Hubitat does not have the same UI that Smartthings Classic does, I've done some innovative things with logging that make it much easier to troubleshoot problems should some arise, and more fun to look at when they don't.
 *
-*  Gary Milne - May 9th, 2022
+*  Gary Milne - May, 2022
 *
 **/
 
@@ -58,13 +61,12 @@ metadata {
         capability "SwitchLevel"
 		capability "Refresh"
 
-        command "fadeSpeed", [ [name:"Duration in seconds for a transation to complete (Persistent). FadeSpeed attribute will be 2X this number.", type: "STRING", description: "The time in seconds (0 - 20) for any transition operation to complete. fadeSpeed will display as 2X this value as Tasmota uses 0.5 seconds intervals. Note: Fade must be turned on for this setting to have any effect."] ]
+        command "fadeSpeed", [ [name:"Duration in seconds for a transation to complete (Persistent). FadeSpeed attribute will be 2X this number.*", type: "STRING", description: "The time in seconds (0 - 20) for any transition operation to complete. fadeSpeed will display as 2X this value as Tasmota uses 0.5 seconds intervals. Note: Fade must be turned on for this setting to have any effect."] ]
         command "fadeToggle"
         command "tasmotaInjectRule"
-        command "tasmotaCustomCommand", [ [name:"Command", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "A single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
-        command "colorSave", [ [name:"Index", type: "STRING", description: "Number by which the color can be accessed."], [name:"Description", type: "STRING", description: "An optional description of the color being saved."] ]
-        command "colorApply", [ [name:"Index", type: "STRING", description: "Number of saved color to apply."] ]
-        command "colorDelete", [ [name:"Index", type: "STRING", description: "Number of saved color to delete."] ]
+        command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter*", type: "STRING", description: "A single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
+        command "colorApply", [ [name:"Index*", type: "STRING", description: "Number of saved color to apply."] ]
+        command "colorSave", [ [name:"Index*", type: "STRING", description: "Number by which the color can be accessed."], [name:"Description*", type: "STRING", description: "An optional description of the color being saved."] ]
         command "initialize"
         command "toggle"
         //command "test"
@@ -104,17 +106,19 @@ metadata {
             input name: "timeout", type: "number", title: bold("Timeout for Tasmota reponse."), description: italic("Time in ms after which a Transaction is closed by the watchdog and subsequent responses will be ignored. Default 5000ms."), defaultValue: "5000", required:true, displayDuringSetup: false
             input name: "debounce", type: "number", title: bold("Debounce Interval for Tasmota Sync."), description: italic("The period in ms from command invocation during which a Tasmota Sync request will be ignored. Default 7000ms."), defaultValue: "7000", required:true, displayDuringSetup: false
             input name: "logging_level", type: "number", title: bold("Level of detail displayed in log"), description: italic("Enter log level 0-3. (Default is 0.)"), defaultValue: "0", required:true, displayDuringSetup: false            
+	        input name: "loggingEnhancements", type: "enum", title: bold("Logging Enhancements."), description: italic("Allows log entries for this device to be enhanced with HTML tags for increased increased readability. (Default - All enhancements.)"),
+                options: [ [0:" No enhancements."],[1:" Prepend log events with device name."],[2:" Enable HTML tags on logged events for this device."],[3:" Prepend log events with device name and enable HTML tags." ] ], defaultValue: 3, required:true
     		input name: "pollFrequency", type: "enum", title: bold("Poll Frequency. Polling not required if using Tasmota Sync on Tasmota 11."), description: italic("The time between Hubitat initiated synchronisation of values with Tasmota. Tasmota is considered authoritative (Default - 0 (Never) )"),
                 options: [ [0:" Never"],[60:" 1 minute"],[300:" 5 minutes"],[600:"10 minutes"],[900:"15 minutes"],[1800:"30 minutes"],[3600:" 1 hour"],[10800:" 3 hours"] ], defaultValue: 0
             input name: "destPort", type: "text", title: bold("Port"), description: italic("The Tasmota webserver port. Only required if not at the default value of 80."), defaultValue: "80", required:false, displayDuringSetup: true
             input name: "username", type: "text", title: bold("Tasmota Username"), description: italic("Tasmota username is required if configured on the Tasmota device."), required: false, displayDuringSetup: true
           	input name: "password", type: "password", title: bold("Tasmota Password"), description: italic("Tasmota password is required if configured on the Tasmota device."), required: false, displayDuringSetup: true
-        }  
+        } 
 }
 
 //Function used for quickly testing out logic and cleaning up.
 def test(){
-    //state.remove("LastSync")
+    //state.remove("WiFi")
 }
 
 //*******************************************************************************************************************************************
@@ -217,7 +221,7 @@ void fadeToggle() {
     log ("fadeToggle", "Exiting", 1)
 }
 
-//This FadeSpeed function uses the Speed command which is a persistent value (as opposed to Speed2)
+//This FadeSpeed function uses the Speed command which is a persistent value (as opposed to SPEED2)
 void fadeSpeed(fadeSpeed) {
     log ("Action - fadeSpeed", "Change fadeSpeed to ${fadeSpeed}", 0)
     //Test to see if the fadeSpeed is a valid integer
@@ -227,26 +231,11 @@ void fadeSpeed(fadeSpeed) {
         if (fadeSpeed < 0) {fadeSpeed = 0}
         }
     catch (Exception e) {
-        log ("Fade", "Error: Invalid fadeSpeed $e", -1)
+        log ("Fade", "Error: Invalid fadeSpeed. Should be a numeric value between 0 and 20.", -1)
         return
         } 
     callTasmota("Speed", fadeSpeed * 2 )
     log ("fadeSpeed", "Exiting", 1)
-}
-
-void colorSave(String indx, String description) {
-    log ("Action - colorSave", "Saving color to index ${indx}", 0)
-    try {
-        index = indx.toInteger()
-        if ( index >= 0 && index <= 9) {
-            color = device.currentValue("color")
-            dimmer = device.currentValue("level")
-            sendEvent(name: "🎨${index}", value: "${color}:${description}")
-            log ("colorSave", "Saved color: ${color} Description: (${description})", 1)
-            }
-            else { log ("colorSave", "Index (${index}) not in range 0 - 9", -1) }
-        }
-    catch (Exception e) { log ("colorSave", "Error: Invalid Index $e", -1) } 
 }
 
 void colorApply(String indx) {
@@ -264,21 +253,23 @@ void colorApply(String indx) {
             }
         else { log ("colorApply", "Index (${index}) not in range 0 - 9", -1) }
         }
-    catch (Exception e) { log ("colorApply", "Error: Invalid Index $e", -1)}
+    catch (Exception e) { log ("colorApply", "Error: Should be a numeric value between 0 and 9.", -1) }
 }
 
-void colorDelete(String indx) {
-    log ("Action - colorDelete", "Deleting color at index ${indx}", 0)
+void colorSave(String indx, String description) {
+    log ("Action - colorSave", "Saving color to index ${indx}", 0)
     try {
         index = indx.toInteger()
         if ( index >= 0 && index <= 9) {
-            sendEvent(name: "🎨${index}", value: "")
-            log ("colorDelete", "🎨${index} removed.", 1)
+            color = device.currentValue("color")
+            sendEvent(name: "🎨${index}", value: "${color}:${description}")
+            log ("colorSave", "Saved color: ${color} Description: (${description})", 1)
             }
             else { log ("colorSave", "Index (${index}) not in range 0 - 9", -1) }
         }
-    catch (Exception e) { log ("colorDelete", "Error: Invalid Index $e", -1) } 
+    catch (Exception e) { log ("colorSave", "Error: Invalid Index. Should be a numeric value between 0 and 9.", -1) }
 }
+
 
 //*********************************************************************************************************************************************************************
 //******
@@ -355,7 +346,7 @@ def hubitatResponse(body){
             def RSSI = wifi.RSSI
             state.RSSI = RSSI
             }
-        log ("hubitatResponse", "Tasmota settings: Power: ${body.POWER} Dimmer: ${body.DIMMER} Mireds: ${body.CT} Color: ${body.COLOR} RSSI: ${state.RSSI}", 2)
+        log ("hubitatResponse", "Tasmota settings: Power: ${body.POWER} Dimmer: ${body.DIMMER} Mireds: ${body.CT} Color: ${body.COLOR} Fade: ${body.FADE} FadeSpeed: ${body.SPEED} RSSI: ${state.RSSI}", 2)
 		
         switch(Action.toUpperCase()) { 
    			case ["POWER"]:
@@ -532,7 +523,7 @@ def syncTasmota(body){
         } 
     
     //Let's see how long it's been since the last command initiated by Hubitat.  If it is less than X seconds we will ignore this sync request as it is an "echo" of the Hubitat request. 
-    elapsed = now() - state.starttime
+    elapsed = now() - state.startTime
    
     if (elapsed > settings.debounce){
         log ("syncTasmota", "Tasmota Sync request processing.", 1)
@@ -779,7 +770,7 @@ def callTasmota(action, receivedvalue){
     
 	//Capture what we are doing so we can validate whether it executed successfully or not
     //We are essentially using the Attribute "Action" as a container for global variables.
-    state.starttime = now()
+    state.startTime = now()
     log ("callTasmota","Opening Transaction", 2)
     state.inTransaction = true
     
@@ -947,18 +938,37 @@ private log(name, message, int loglevel){
     if (message.toString().toUpperCase().contains("<CRLF>")==true ) { message = message.replace("<CRLF>","\n🔷 ") }
     if ( (name.toString().toUpperCase().contains("ACTION")==true ) && (message.toString().toUpperCase().contains("COLOR")==true ) ) icon3 = "🎨"
 
-    //If the logging level is 0 then we do not need to highlight the display as much.
-    if ( settings.logging_level == 0 ) {
-        log.info ( blue(device.displayName) + " - " + icon1 + icon2 + icon3 + indent + name + ": " + green(message)) 
+    displayName = ""
+    newMessage = message
+    
+    //log.info ("settings.loggingEnhancements: " + settings.loggingEnhancements )
+    
+    switch(settings.loggingEnhancements) { 
+        case "0": 
+             break
+        case "1": 
+            displayName = device.displayName + " - "
+            break
+        case "2": 
+            break
+        case "3":
+            displayName = blue(device.displayName) + " - "
         }
-    else 
-        {
-        //If the logging level is > 0 then we do more highlighting so that the display is easier to read.
-        if ( loglevel <= 0 ) { log.info ( blue(device.displayName) + " - " + icon1 + icon2 + icon3 + indent + bold(name) + ": " + green(bold(message)) ) }
-        if ( loglevel == 1 ) { log.info ( blue(device.displayName) + " - " + icon1 + icon2 + icon3 + indent + black(name) + ": " + green(message) )  }
-        if ( loglevel == 2 ) { log.debug ( blue(device.displayName) + " - " + icon1 + icon2 + icon3 + indent + goldenrod(name) + ": " + goldenrod(message) ) }
-        if ( loglevel >= 3 ) { log.debug ( blue(device.displayName) + " - " + icon1 + icon2 + icon3 + indent + midnightBlue(name) + ": " + midnightBlue(message) )  }
+   
+    //For logging enhancements (2 & 3) then we make the newMessage formatted with HTML colors. 0 & 1 have no HTML
+    if ( settings.loggingEnhancements == "2" || settings.loggingEnhancements == "3") {
+        if ( loglevel <= 0 ) {
+            //If the logging level is 0 then we do not need to highlight the display as much as we are not trying to make it stand out against anything.
+            if ( settings.logging_level == 0 ) newMessage = name + ": " + green(message)
+            else newMessage = bold(name) + ": " + green(bold(message))
         }
+        if ( loglevel == 1 ) newMessage = black(name) + ": " + green(message)
+        if ( loglevel == 2 ) newMessage = goldenrod(name) + ": " + goldenrod(message)
+        if ( loglevel >= 3 ) newMessage = midnightBlue(name) + ": " + midnightBlue(message)
+       }
+    
+    if ( loglevel <= 1 ) { log.info ( displayName + icon1 + icon2 + icon3 + indent + newMessage)  }
+    if ( loglevel >= 2 ) { log.debug ( displayName + icon1 + icon2 + icon3 + indent + newMessage) }
 }
 
 //*********************************************************************************************************************************************************************
@@ -1084,10 +1094,10 @@ def setColorTemperature(kelvin, Dimmer, duration){
     if (Dimmer != null) {
         if (Dimmer < 0) Dimmer = 0
         if (Dimmer > 100) Dimmer = 100
-        command = "Rule3 OFF ; CT ${mireds} ; Dimmer ${Dimmer} ; Speed2 ${duration} ; DELAY ${delay} ; Rule3 ON"
+        command = "Rule3 OFF ; CT ${mireds} ; Dimmer ${Dimmer} ; SPEED2 ${duration} ; DELAY ${delay} ; Rule3 ON"
         }
     else{
-        command = "Rule3 OFF ; CT ${mireds} ; Speed2 ${duration} ; DELAY ${delay} ; Rule3 ON"
+        command = "Rule3 OFF ; CT ${mireds} ; SPEED2 ${duration} ; DELAY ${delay} ; Rule3 ON"
         }
     callTasmota("BACKLOG", command )
     }
@@ -1105,7 +1115,7 @@ def setLevel(Dimmer, duration) {
     if (duration > 0 ) duration = Math.round(duration * 2)    //Tasmota uses 0.5 second increments so double it for Tasmota Speed value
     delay = duration * 10 + 5    //Delay is in 1/10 of a second so we make it slightly longer than the actual fade delay.
 	log ("Action - setLevel2", "Request Dimmer: ${Dimmer}% ;  Speed2: ${duration}", 0)
-    command = "Rule3 OFF ; Dimmer ${Dimmer} ; Speed2 ${duration} ; DELAY ${delay} ; Rule3 ON"
+    command = "Rule3 OFF ; Dimmer ${Dimmer} ; SPEED2 ${duration} ; DELAY ${delay} ; Rule3 ON"
 	callTasmota("BACKLOG", command)
 	}
 
@@ -1374,7 +1384,7 @@ def cleanURL(path){
 //Returns the maximum amount of time until a Transaction is guaranteed to be finished.  Used to slow sequential BACKLOG transactions.
 def remainingTime(){
     if (state.inTransaction == true ) {
-        start = state.starttime
+        start = state.startTime
         remainingTime = ( start + settings.timeout - now() )
     }
     else { remainingTime = 0 }
