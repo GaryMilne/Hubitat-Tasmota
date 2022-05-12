@@ -52,7 +52,7 @@
 import groovy.json.JsonSlurper
 
 metadata {
-		definition (name: "Tasmota Sync - Fan", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/garymilne/??????", singleThreaded: true )  {
+		definition (name: "Tasmota Sync - Fan", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Tasmota%20Sync%20Fan%20-%20Current%20Version.txt", singleThreaded: true )  {
         capability "Switch"
         capability "FanControl"
         capability "Refresh"
