@@ -1,7 +1,7 @@
 /**
 *  Copyright 2022 Gary J. Milne
 *
-*  Version: v0.92\0.96C
+*  Version: v0.93\0.98
 *
 *  This program is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -16,6 +16,7 @@
 *  Version 0.91 - Internal version
 *  Version 0.92 - Added logic for extracting HSV values from color and updating the attributes on any change. Added hue, saturation and value attributes for Hubitat compatibility.
 *  Version 0.92A - Made ENUM fields for commands required and cleaned up error handling logic.
+*  Version 0.93 - Color changes use COLOR when dimmer at 100% and COLOR2 when dimmer less than 100% to preserve dimmer value.
 *
 *  CORE - IDENTICAL - CHANGELOG
 *  All changes to code in the CORE section will be commented here. Changes to the UNIQUE section that are made across all drivers will also be commented here.
@@ -30,6 +31,7 @@
 *  Version 0.96B - Added logging enhancements with HTML tags. Added blue highlight to key fields in preferences.
 *  Version 0.96C - Added handling for Tasmota "WARNING" message that occurs when authentication fails and possibly other scenarios.
 *  Version 0.97 - Added option in settings to disable use of HTML enhancements in logging. These do not show correctly on a secondary hub in a two+ hub environment. This option allows them to be disabled.
+*  Version 0.98 - Updated cleanURL to support "+". Updated all color functions to use COLOR when dimmer at 100% and COLOR2 when dimmer less than 100% to preserve dimmer value.
 *
 * Authors Notes:
 * You might be asking yourself, do we really need another Tasmota driver for Hubitat? It's a fair question as there are already multiple drivers available. By far the best is the "Tasmota Device Manager" by Markus Li.
@@ -249,7 +251,10 @@ void colorApply(String indx) {
             color = str[0]
             description = str[1]
             log ("colorApply", "Applying Preset 🎨${index} color: ${color} Description: (${description})", 1)
-            callTasmota("COLOR", color )
+            
+            //If a dimmer level is set we will preserve it when changing the color.
+            if ( device.currentValue('level') == 100 ) callTasmota("COLOR", color )
+            else callTasmota("COLOR2", color )
             }
         else { log ("colorApply", "Index (${index}) not in range 0 - 9", -1) }
         }
@@ -375,6 +380,26 @@ def hubitatResponse(body){
                     log ("hubitatResponse","Color applied successfully", 0)
                     sendEvent(name: "switch", value: "on", displayed:true)
                     sendEvent(name: "color", value: desiredColor, displayed:true)
+                    sendEvent(name: "level", value: body.DIMMER, displayed:true)
+                    sendEvent(name: "Mireds", value: body.CT, displayed:false)
+                    sendEvent(name: "colorTemperature", value: miredsToKelvin(body.CT))
+                    setHSVfromColor(body.COLOR)
+                    updateStatus("Complete:Success")
+                    }
+                else
+                	{
+                    log("hubitatResponse","Color state failed to apply", -1)
+                    updateStatus("Complete:Fail")
+                	}
+                break
+            
+            case ["COLOR2"]:	
+                //When we use COLOR2 the color returned does not match the color requested because it is adjusted by the dimmer setting.
+                log("hubitatResponse","Command: COLOR2: ${body.COLOR}. Adjusted for dimmer!)", 1)
+                if ( body?.COLOR != null){
+                    log ("hubitatResponse","Color applied successfully. (Adjusted for dimmer!)", 0)
+                    sendEvent(name: "switch", value: "on", displayed:true)
+                    sendEvent(name: "color", value: body.COLOR, displayed:true)
                     sendEvent(name: "level", value: body.DIMMER, displayed:true)
                     sendEvent(name: "Mireds", value: body.CT, displayed:false)
                     sendEvent(name: "colorTemperature", value: miredsToKelvin(body.CT))
@@ -1139,7 +1164,9 @@ def setHue(float value){
     HEX = hubitat.helper.ColorUtils.rgbToHEX(RGB)
     log ("setHue", "New HEX Color is: ${HEX}", 1)
     
-    callTasmota("COLOR", HEX )   
+    //If a dimmer level is set we will preserve it when changing the color.
+    if ( device.currentValue('level') == 100 ) callTasmota("COLOR", HEX )
+    else callTasmota("COLOR2", HEX )
 }
 
 def setSaturation(float value){
@@ -1161,7 +1188,9 @@ def setSaturation(float value){
     HEX = hubitat.helper.ColorUtils.rgbToHEX(RGB)
     log ("setSaturation", "New HEX Color is: ${HEX}", 1)
     
-    callTasmota("COLOR", HEX )   
+    //If a dimmer level is set we will preserve it when changing the color.
+    if ( device.currentValue('level') == 100 ) callTasmota("COLOR", HEX )
+    else callTasmota("COLOR2", HEX )
 }
 
 //Extracts the corresponding HSV values for a given HEX color and populates the respective attributes
@@ -1225,7 +1254,9 @@ def setColor(value) {
         //This is going to appear to Tasmota as a Color change and Tasmota will respond with setting the Dimmer at 100.
         //This change will be reflected automatically in the Hubitat app but may not be picked up by other integration platforms if that was the source of the Color selection.
         }
-    	callTasmota("COLOR", desiredColor )   
+        //If a dimmer level is set we will preserve it when changing the color.
+        if ( device.currentValue('level') == 100 ) callTasmota("COLOR", desiredColor )
+        else callTasmota("COLOR2", desiredColor )
     }
 
 //Tests whether a given Color is RGB or W and returns true or false plus the cleaned up Color
@@ -1371,6 +1402,7 @@ def cleanURL(path){
     path = path?.replace(" ","%20") 
     path = path?.replace("#","%23") 
     path = path?.replace("\$","%24") 
+    path = path?.replace("+","%2B") 
     path = path?.replace(":","%3A") 
     path = path?.replace(";","%3B") 
     path = path?.replace("<","%3C") 
