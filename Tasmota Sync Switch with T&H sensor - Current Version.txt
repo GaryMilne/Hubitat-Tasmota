@@ -53,7 +53,7 @@
 import groovy.json.JsonSlurper
 
 metadata {
-		definition (name: "Tasmota Sync - Switch with T&H Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Tasmota%20Sync%20Switch%20with%20T&H%20Sensor%20-%20Current%20Version.txt", singleThreaded: true )  {
+		definition (name: "Tasmota Sync - Switch with T&H Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Tasmota%20Sync%20Switch%20with%20T%26H%20sensor%20-%20Current%20Version.txt", singleThreaded: true )  {
         capability "Power Meter"
         capability "Refresh"
         capability "RelativeHumidityMeasurement"
