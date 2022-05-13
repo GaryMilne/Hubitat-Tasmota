@@ -51,7 +51,7 @@
 import groovy.json.JsonSlurper
 
 metadata {
-		definition (name: "Tasmota Sync - Dual Switch", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Tasmota%20Sync%20Dual%20Plug_Switch%20-%20Current%20Version.txt", singleThreaded: true )  {
+		definition (name: "Tasmota Sync - Dual Plug_Switch", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Tasmota%20Sync%20Dual%20Plug_Switch%20-%20Current%20Version.txt", singleThreaded: true )  {
         capability "Switch"
         capability "Refresh"
 

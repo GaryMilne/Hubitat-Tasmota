@@ -54,7 +54,7 @@
 import groovy.json.JsonSlurper
 
 metadata {
-		definition (name: "Tasmota Sync - Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Tasmota%20Sync%20Plug_Switch%20-%20Current%20Version.txt", singleThreaded: true )  {
+		definition (name: "Tasmota Sync - Plug\\Switch", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Tasmota%20Sync%20Plug_Switch%20-%20Current%20Version.txt", singleThreaded: true )  {
         capability "Switch"
         capability "Refresh"
         capability "Power Meter"
