@@ -61,6 +61,7 @@ metadata {
         command "initialize"
         command "tasmotaInjectRule"
         command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "An optional single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
+	command "toggle"
         //command "test"
         
         //Internally named variables that must be lower case
