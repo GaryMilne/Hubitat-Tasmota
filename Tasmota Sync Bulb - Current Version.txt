@@ -1,13 +1,13 @@
 /**
 *  Copyright 2022 Gary J. Milne
 *
-*  Version: v0.92A\0.97
+*  Version: v0.92\0.96C
 *
 *  This program is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
 *  the Free Software Foundation.
 *
-*  This driver is one of several in the Tasmota Sync series. (Bulb, Simple Switch\Switch with PM, Dual Outlet, Dimmer Switch, Switch with Fan, Switch with Sensor (Temp & Humidity). All of these drivers are very similar and much of the code is identical.
+*  This driver is one of several in the Tasmota Sync series. (Bulb, Plug, Dual Outlet, Dimmer Switch, Switch with Fan, Switch with Sensor (Temp & Humidity). All of these drivers are very similar and much of the code is identical.
 *  To simplifiy maintenance all of these drivers have two sections. Search for the phrase "END OF UNIQUE FUNCTIONS" to find the split.
 *  #1 The top section contains code that is UNIQUE to a specific driver such as a bulb vs a switch vs a dimmer. Although this code is UNIQUE it is very similar between drivers.
 *  #2 The bottom section is code that is IDENTICAL and shared across all drivers and is about 700 - 800 lines of code. This section of code is referred to as CORE.
@@ -64,7 +64,7 @@ metadata {
         command "fadeSpeed", [ [name:"Duration in seconds for a transation to complete (Persistent). FadeSpeed attribute will be 2X this number.*", type: "STRING", description: "The time in seconds (0 - 20) for any transition operation to complete. fadeSpeed will display as 2X this value as Tasmota uses 0.5 seconds intervals. Note: Fade must be turned on for this setting to have any effect."] ]
         command "fadeToggle"
         command "tasmotaInjectRule"
-        command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter*", type: "STRING", description: "A single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
+        command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "An optional single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
         command "colorApply", [ [name:"Index*", type: "STRING", description: "Number of saved color to apply."] ]
         command "colorSave", [ [name:"Index*", type: "STRING", description: "Number by which the color can be accessed."], [name:"Description*", type: "STRING", description: "An optional description of the color being saved."] ]
         command "initialize"

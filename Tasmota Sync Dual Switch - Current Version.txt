@@ -1,7 +1,7 @@
 /**
 *  Copyright 2022 Gary J. Milne
 *
-*  Version: v0.94\0.97
+*  Version: v0.91\0.97
 *
 *  This program is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -12,11 +12,8 @@
 *  #1 The top section contains code that is UNIQUE to a specific driver such as a bulb vs a switch vs a dimmer. Although this code is UNIQUE it is very similar between drivers.
 *  #2 The bottom section is code that is IDENTICAL and shared across all drivers and is about 700 - 800 lines of code. This section of code is referred to as CORE.
 *
-*  PLUG - UNIQUE - CHANGELOG
+*  DUAL SWITCH - UNIQUE - CHANGELOG
 *  Version 0.91 - Internal version
-*  Version 0.92 - Allow device handler to operate for Plug or Plug with Power Monitoring
-*  Version 0.93 - Allow user to select a reduced set of properties to operate on to minimize data reporting.
-*  Version 0.94 - Changed driver name\references from Switch to Plug.
 *
 *  CORE - IDENTICAL - CHANGELOG
 *  All changes to code in the CORE section will be commented here. Changes to the UNIQUE section that are made across all drivers will also be commented here.
@@ -54,49 +51,43 @@
 import groovy.json.JsonSlurper
 
 metadata {
-		definition (name: "Tasmota Sync - Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Tasmota%20Sync%20Plug%20-%20Current%20Version.txt", singleThreaded: true )  {
+		definition (name: "Tasmota Sync - Dual Switch", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Tasmota%20Sync%20Dual%20Switch%20-%20Current%20Version.txt", singleThreaded: true )  {
         capability "Switch"
         capability "Refresh"
-        capability "Power Meter"
 
+        attribute "switch", "string"		
+        attribute "switch2", "string"		
+		attribute "Status", "string"
+
+        command "Power2On"
+        command "Power2Off"
         command "initialize"
         command "tasmotaInjectRule"
         command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "An optional single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
-        command "tasmotaTelePeriod", [ [name:"Seconds*", type: "STRING", description: "The number of seconds between Tasmota data updates (TelePeriod XX). Only applies to Switches with Power Monitoring."] ]
-        command "toggle"
         //command "test"
-        
-        //Internally named variables that must be lower case
-        attribute "switch", "string"
-        attribute "current", "number"
-        attribute "power", "number"
-        attribute "voltage", "number"
-		
-		//Driver specific variables where case does not matter.
-        attribute "Status", "string" 
 	}
-
-        section("Configure the Inputs"){
-			input name: "destIP", type: "text", title: bold(dodgerBlue("Tasmota Device IP Address")), description: italic("The IP address of the Tasmota device."), defaultValue: "192.168.0.X", required:true, displayDuringSetup: true
+    
+    section("Configure the Inputs"){
+			input name: "destIP", type: "text", title: bold(dodgerBlue("Tasmota Device IP Address")), description: italic("The IP address of the Tasmota device."), defaultValue: green("192.168.0.X"), required:true, displayDuringSetup: true
             input name: "HubIP", type: "text", title: bold(dodgerBlue("Hubitat Hub IP Address")), description: italic("The Hubitat Hub Address. Used by Tasmota rules to send HTTP responses."), defaultValue: "192.168.0.X", required:true, displayDuringSetup: true
-            input name: "plugType", type: "enum", title: bold("Type: Simple Plug, Plug with Power (Watts), Plug with Power, Voltage and Current."),description: italic("A Tasmota device that reports data can generate a lot of events, especially if the Tasmota TelePeriod is a low value. This setting will reduce the amount of data being recorded by ignoring non-essential changes. ") + underline("Note: A change in plug type requires re-installation of RULE3 for proper function."),
-                options: [[0:"Simple Plug. Log ONLY switch events. (Default)"], [1:"Plug with Power Monitoring. Log ONLY Switch and Power events."],[2:"Plug with Power Monitoring. Log ALL Switch, Power, Current and Voltage events"]], defaultValue: 0, required:true
             input name: "timeout", type: "number", title: bold("Timeout for Tasmota reponse."), description: italic("Time in ms after which a Transaction is closed by the watchdog and subsequent responses will be ignored. Default 5000ms."), defaultValue: "5000", required:true, displayDuringSetup: false
             input name: "debounce", type: "number", title: bold("Debounce Interval for Tasmota Sync."), description: italic("The period in ms from command invocation during which a Tasmota Sync request will be ignored. Default 7000ms."), defaultValue: "7000", required:true, displayDuringSetup: false
+            input name: "switchBehaviour", type: "enum", title: bold("Switch Behaviour."), description: italic("Whether the primary Switch affects only outlet 1 or both outlet 1 and outlet 2.)"),
+              options: [ [1:"Turns ON\\OFF only Power1"],[2:"Turns ON\\OFF Power1 & Power2"] ], defaultValue: 1
             input name: "logging_level", type: "number", title: bold("Level of detail displayed in log"), description: italic("Enter log level 0-3. (Default is 0.)"), defaultValue: "0", required:true, displayDuringSetup: false            
-	        input name: "loggingEnhancements", type: "enum", title: bold("Logging Enhancements."), description: italic("Allows log entries for this device to be enhanced with HTML tags for increased increased readability. (Default - All enhancements.)"),
+            input name: "loggingEnhancements", type: "enum", title: bold("Logging Enhancements."), description: italic("Allows log entries for this device to be enhanced with HTML tags for increased increased readability. (Default - All enhancements.)"),
                 options: [ [0:" No enhancements."],[1:" Prepend log events with device name."],[2:" Enable HTML tags on logged events for this device."],[3:" Prepend log events with device name and enable HTML tags." ] ], defaultValue: 3, required:true
     		input name: "pollFrequency", type: "enum", title: bold("Poll Frequency. Polling not required if using Tasmota Sync on Tasmota 11."), description: italic("The time between Hubitat initiated synchronisation of values with Tasmota. Tasmota is considered authoritative (Default - 0 (Never) )"),
                 options: [ [0:" Never"],[60:" 1 minute"],[300:" 5 minutes"],[600:"10 minutes"],[900:"15 minutes"],[1800:"30 minutes"],[3600:" 1 hour"],[10800:" 3 hours"] ], defaultValue: 0
             input name: "destPort", type: "text", title: bold("Port"), description: italic("The Tasmota webserver port. Only required if not at the default value of 80."), defaultValue: "80", required:false, displayDuringSetup: true
             input name: "username", type: "text", title: bold("Tasmota Username"), description: italic("Tasmota username is required if configured on the Tasmota device."), required: false, displayDuringSetup: true
           	input name: "password", type: "password", title: bold("Tasmota Password"), description: italic("Tasmota password is required if configured on the Tasmota device."), required: false, displayDuringSetup: true
-        } 
+        }  
 }
 
 //Function used for quickly testing out logic and cleaning up.
 def test(){
-    state.remove("starttime")
+    //state.remove("lastResponse")
 }
 
 //*********************************************************************************************************************************************
@@ -112,16 +103,15 @@ def test(){
 //******
 //*********************************************************************************************************************************************************************
 
-
 //Updated gets run when the "Initialize" button is clicked or when the device driver is selected
 def initialize(){
-	log("Action", "Initialize/Update Device", 0)
+	log("Initialize", "Device initialized", 0)
     //Cancel any existing scheduled tasks for this device
     unschedule("poll")
 	//Make sure we are using the right address
     updateDeviceNetworkID()
     
-    log("Initialize", "pollFrequency value: ${settings.pollFrequency}",1)
+    log("Initialize", "pollFrequency value: ${settings.pollFrequency} seconds.",0)
     
     //Test to make sure the entered frequency is in range
     switch(settings.pollFrequency) { 
@@ -137,35 +127,8 @@ def initialize(){
    	//To be safe these are populated with initial values to prevent a null return if they are used as logic flags
     if ( state.Action == null ) state.Action = "None"
     if ( state.ActionValue == null ) state.ActionValue = "None"
-    if ( device.currentValue("Status") == null ) updateStatus("Complete")    
-
-    //Simple switch - no PM
-    if (settings.plugType.toInteger() == 0 ) {
-        state.plugType = "Simple switch"
-        log("Initialize", "Configured as simple switch. No power monitoring information.", 0)
-        if ( device.currentValue("current") != null ) sendEvent(name: "current", value: "--", descriptionText: "Current events have been disabled", unit: "Amps", isStateChange: true )
-        if ( device.currentValue("voltage") != null ) sendEvent(name: "voltage", value: "--", descriptionText: "Voltage events have been disabled", unit: "Volts", isStateChange: true )
-        if ( device.currentValue("power") != null ) sendEvent(name: "power", value: "--", descriptionText: "Power events have been disabled", unit: "Watts", isStateChange: true )
-    }
-    
-    //Plug with PM. Only log switch and power events
-    if (settings.plugType.toInteger() == 1 ) {
-        state.plugType = "Lite Power Monitoring (Watts only)."
-        log("Initialize", "Configured as switch with lite power monitoring. ONLY logging switch and power events.", 0)
-        if ( device.currentValue("power") != null ) sendEvent(name: "power", value: 0, descriptionText: "Power (watts) events have been enabled", unit: "Watts", isStateChange: true )
-        if ( device.currentValue("current") != null ) sendEvent(name: "current", value: "--", descriptionText: "Current events have been disabled", unit: "Amps", isStateChange: true )
-        if ( device.currentValue("voltage") != null ) sendEvent(name: "voltage", value: "--", descriptionText: "Voltage events have been disabled", unit: "Volts", isStateChange: true )
-    }
-    
-    //Plug with PM. Only log switch and power events
-    if (settings.plugType.toInteger() == 2 ) {
-        state.plugType = "Full Power Monitoring (Current, Voltage and Watts)."
-        log("Initialize", "Configured as switch with power monitoring. Logging ALL switch, power, voltage and amps events.", 0)
-        sendEvent(name: "current", value: 0, descriptionText: "Current events have been enabled", unit: "Amps", isStateChange: true )
-        sendEvent(name: "voltage", value: 0, descriptionText: "Voltage events have been enabled", unit: "Volts", isStateChange: true )
-        sendEvent(name: "power", value: 0, descriptionText: "Power (watts) events have been enabled", unit: "Watts", isStateChange: true )
-    }
-        
+    if ( device.currentValue("Status") == null ) updateStatus("Complete")   
+     
     //Do a refresh to sync the device driver
     refresh()
 }
@@ -184,18 +147,43 @@ def initialize(){
 //******
 //*********************************************************************************************************************************************************************
 
-//Turns the Power on to both switches switch on
-//Note: POWER and POWER1 are synonymous in Tasmota when issuing commands however STATE only returns "POWER"
+//Turns the Power on to one or both switches based on settings. Note: Power and Power1 are synonymous in Tasmota
 def on() {
-    log("Action", "Turn on switch", 0)
-    callTasmota("POWER", "on")
+    if (settings.switchBehaviour == "1") {
+        log("Action", "Turn on switch1", 0)
+        callTasmota("POWER1", "ON")
+        }
+    else 
+        {
+        log("Action", "Turn on both switches", 0)
+        command = "POWER1 ON; POWER2 ON"
+        callTasmota("BACKLOG", command)
+        }
     }
         
-//Turns the switch off
+//Turns off one or both switches.
 def off() {
-	log("Action", "Turn off switch", 0)
-    callTasmota("POWER", "off")
+    if (settings.switchBehaviour == "1") {
+        log("Action", "Turn off switch1", 0)
+        callTasmota("POWER1", "OFF")
+        }
+    else 
+        {
+        log("Action", "Turn off both switches", 0)
+        command = "POWER1 OFF; POWER2 OFF"
+        callTasmota("BACKLOG", command)
+        }
 	}
+
+def Power2On() {
+    log("Action", "Turn on switch 2", 0)
+    callTasmota("POWER2", "ON")
+    }
+
+def Power2Off() {
+    log("Action", "Turn off switch 2", 0)
+    callTasmota("POWER2", "OFF")
+    }
 
 //*********************************************************************************************************************************************************************
 //******
@@ -215,19 +203,9 @@ def off() {
 //This function is called from the button press and automatically via the polling method
 //In drivers with SENSOR data this function is a little different.
 def refresh(){
-    log ("Action", "Refresh started....", 0)
-    
-     //If it is configured for PM then we will get sensor data (STATUS 8) first.
-    if (settings.plugType.toInteger() > 0 ) {
-        log("refresh", "Getting sensor data.", 1)
-        state.lastSensorData = new Date().format('yyyy-MM-dd HH:mm:ss')
-        callTasmota("STATUS", "8" )
-    }
-    
-    //Calculate when the current operations should be finished and schedule the "STATE" command to run after them.
-    def parameters = ["STATE",""]
-    runInMillis(remainingTime() + 500, "callTasmota", [data:parameters])
-    state.LastSync = new Date().format('yyyy-MM-dd HH:mm:ss')
+		log ("Action", "Refresh started....", 0)
+        state.LastSync = new Date().format('yyyy-MM-dd HH:mm:ss')
+		callTasmota("STATE", "" )
     }
 
 //*****************************************************************************************************************************************************************************************************
@@ -256,14 +234,14 @@ def refresh(){
 def hubitatResponse(body){
     log ("hubitatResponse", "Entering, data received", 1)
     log ("hubitatResponse", "Raw data is: ${body}.", 2)
-   
+    
     //Get the command and value that was submitted to the callTasmota function
     Action = state.Action
-    ActionValue = state.ActionValue
+    ActionValue = state.ActionValue    
     
     log ("hubitatResponse", "Flags are Action:${state.Action}  ActionValue:${state.ActionValue}", 2)
     
-	//Test to see if we got a warning from Tasmota
+    //Test to see if we got a warning from Tasmota
     tasmotaWarning = false
     if (body.contains("WARNING") == true ) {
         tasmotaWarning = true            
@@ -275,7 +253,7 @@ def hubitatResponse(body){
     body = parseJson(body)
     
     //Check to make sure we have some data to act on.
-    if (body !=null && tasmotaWarning == false ){
+    if (body !=null){
         //If the response contains the WiFi info then we extract the RSSI value for display as a state variable.
         if (body.WIFI != null ){
             def wifi = body.WIFI
@@ -285,33 +263,36 @@ def hubitatResponse(body){
             }
         
         switch(Action.toUpperCase()) { 
-   			case ["POWER"]:
-        		log("hubitatResponse","Command: Power ${body.POWER}", 1)
-                if (ActionValue.toUpperCase() == body.POWER){
-                    log ("hubitatResponse","Power state applied successfully", 0)
+   			case ["POWER1"]:
+        		log("hubitatResponse","Command: Power1 ${body.POWER1}", 0)
+                if (ActionValue.equalsIgnoreCase(body.POWER1) ){
+                    log ("hubitatResponse","Power1 state applied successfully", 0)
                     updateStatus("Complete:Success")
                     //We got the response we were looking for so we can actually change the state of the switch in the UI.
-					//If the switch is turned off then the power statistics (if applicable) must be zero. However, if TSync is enabled then it will fire a Sync anyway.																															   
+                    //If the switch is turned off then the power statistics must be zero. However, if TSync is enabled then it will fire a Sync anyway.
                     sendEvent(name: "switch", value: ActionValue.toLowerCase(), descriptionText: "The switch has been turned ${ActionValue.toLowerCase()}", isStateChange: true )
                     if ( ActionValue.toLowerCase() == "on" ) state.lastOn = new Date().format('MM-dd HH:mm:ss')
                     if ( ActionValue.toLowerCase() == "off" ) state.lastOff = new Date().format('MM-dd HH:mm:ss')
-                  }
+                    } 
             else {
-                log("hubitatResponse","Power state failed to apply", -1)
+                log("hubitatResponse","Power1 state failed to apply", -1)
                 updateStatus("Complete:Fail")
                 }
             	break
             
-            case ["TELEPERIOD"]:
-        		log("hubitatResponse","Command: TelePeriod ${body.TELEPERIOD}", 1)
-                if (ActionValue.toInteger() == body.TELEPERIOD)
-                    {
-                    log ("hubitatResponse","TelePeriod applied successfully", 0)
-                    state.TelePeriod = body.TELEPERIOD
+            case ["POWER2"]:
+        		log("hubitatResponse","Command: Power2 ${body.POWER2}", 0)
+                if (ActionValue.equalsIgnoreCase(body.POWER2) ){
+                    log ("hubitatResponse","Power2 state applied successfully", 0)
                     updateStatus("Complete:Success")
-                  }
+                    //We got the response we were looking for so we can actually change the state of the switch in the UI.
+                    //If the switch is turned off then the power statistics must be zero. However, if TSync is enabled then it will fire a Sync anyway.
+                    sendEvent(name: "switch2", value: ActionValue.toLowerCase(), descriptionText: "The switch2 has been turned ${ActionValue.toLowerCase()}", isStateChange: true )
+                    if ( ActionValue.toLowerCase() == "on" ) state.lastOnSwitch2 = new Date().format('MM-dd HH:mm:ss')
+                    if ( ActionValue.toLowerCase() == "off" ) state.lastOffSwitch2 = new Date().format('MM-dd HH:mm:ss')
+                } 
             else {
-                log("hubitatResponse","TelePeriod failed to apply", -1)
+                log("hubitatResponse","Power2 state failed to apply", -1)
                 updateStatus("Complete:Fail")
                 }
             	break
@@ -329,10 +310,11 @@ def hubitatResponse(body){
                 //"HSBColor":"248,84,0","White":68,"CT":500,"Channel":[0,0,0,0,68],"Scheme":0,"Fade":"OFF","Speed":20,"LedTable":"ON","Wifi":{"AP":1,"SSId":"5441","BSSId":"A0:04:60:95:0E:62","Channel":6,"Mode":"11n",
                 //"RSSI":100,"Signal":-47,"LinkCount":1,"Downtime":"0T00:00:06"}}
                 log ("hubitatResponse","Setting device handler values to match device.", 0)
-                sendEvent(name: "switch", value: body.POWER.toLowerCase(), descriptionText: "The switch has been turned ${body.POWER.toLowerCase()}", isStateChange: true )
+                sendEvent(name: "switch", value: body.POWER1.toLowerCase(), displayed:false)
+                sendEvent(name: "switch2", value: body.POWER2.toLowerCase(), displayed:false)
                 updateStatus("Complete:Success")
-            	break
-
+            	break            
+            
             default:
                 //Response to any other undefined commands will come here.  This is most likely because of a custom command
             	//If we come back to this spot we know a command was issued and SOMETHING came back so we know the command at least got to the device.
@@ -343,12 +325,13 @@ def hubitatResponse(body){
         }
     log ("hubitatResponse","Closing Transaction", 1)
     state.inTransaction = false
-   	log ("hubitatResponse","Exiting", 1)
+   	log ("hubitatResponse","Exiting", 0)
    }
 
-
 //*****************************************************************************************************************************************************************************************************
+//******
 //****** End of hubitatResponse()
+//******
 //*****************************************************************************************************************************************************************************************************
 
 
@@ -361,7 +344,6 @@ def hubitatResponse(body){
 
 def syncTasmota(body){
     log ("syncTasmota", "Data received: ${body}", 0)
-	
     //This is a special case that only happens when the rules are being injected
     if (state.ruleInjection == true){
         log ("syncTasmota", "Rule3 special case complete.", 1)
@@ -379,45 +361,36 @@ def syncTasmota(body){
         log ("syncTasmota", "Tasmota Sync request processing.", 1)
         state.Action = "Tasmota"
         state.ActionValue = "Sync"
-        state.lastTasmotSync = new Date().format('yyyy-MM-dd HH:mm:ss')
-		
+        state.lastTasmotaSync = new Date().format('yyyy-MM-dd HH:mm:ss')
         //Now parse into JSON to extract data.
         body = parseJson(body)
         
         //Preset the values for when the %vars% are empty
-        switchVal = -1 ; current = -1 ; voltage = -1 ; watts = -1
+        switch1 = -1 ; switch2 = -1
         
         //A value of '' for any of these means no update. Probably because the device has restarted and the %vars% have not repopulated. This is expected.
-        if (body?.SWITCH != '') { switchVal = body?.SWITCH ; log ("syncTasmota","Switch is: ${switchVal}", 2) }
-        if (body?.WATTS != '') { watts = body?.WATTS ; log ("syncTasmota","Watts is: ${watts}", 2) }
-        if (body?.CURRENT != '') { current = body?.CURRENT ; log ("syncTasmota","Current is: ${current}", 2) }
-        if (body?.VOLTAGE != '') { voltage = body?.VOLTAGE ; log ("syncTasmota","Voltage is: ${voltage}", 2) }
+        if (body?.SWITCH1 != '') { switch1 = body?.SWITCH1 ; log ("syncTasmota","Switch is: ${switch1}", 2) }
+        if (body?.SWITCH2 != '') { switch2 = body?.SWITCH2 ; log ("syncTasmota","Switch is: ${switch2}", 2) }
         
-        //Only changes will get logged so we can report everything. In Tasmota, "power" is the switch state.
-        if ( switchVal.toInteger() == 0 ) sendEvent(name: "switch", value: "off", descriptionText: "The switch was turned off.")
-        if ( switchVal.toInteger() == 1 ) sendEvent(name: "switch", value: "on", descriptionText: "The switch was turned on.")
-                
-        //Send Wattage information if configured. Ignore anything less than 0.
-        if (settings.plugType.toInteger() >= 1 ){ 
-            if ( watts.toInteger() >= 0 ) sendEvent(name: "power", value: watts, unit: "Watts") 
-            }
+        //Now apply any changes that have been found. In Tasmota, "power" is the switch state unless referring to sensor data.
+        if ( switch1.toInteger() == 0 ) sendEvent(name: "switch", value: "off", descriptionText: "Switch 1 was turned off.")
+        if ( switch1.toInteger() == 1 ) sendEvent(name: "switch", value: "on", descriptionText: "Switch 1 was turned on.")
+        if ( switch2.toInteger() == 0 ) sendEvent(name: "switch2", value: "off", descriptionText: "Switch 2 was turned off.")
+        if ( switch2.toInteger() == 1 ) sendEvent(name: "switch2", value: "on", descriptionText: "Switch 2 was turned on.")
         
-        //Send current and voltage events if configured. Ignore anything less than 0.
-        if (settings.plugType.toInteger() >= 2 ){
-            if ( current.toFloat() >= 0 ) sendEvent(name: "current", value: current, unit: "Amps" )
-            if ( voltage.toInteger() >= 0 ) sendEvent(name: "voltage", value: voltage, unit: "Volts" )
-            }
         updateStatus ("Complete:Tasmota Sync")
         log ("syncTasmota", "Sync completed. Exiting", 0)
         return
         }
-    else {
+     else {
         log ("syncTasmota", "Tasmota Sync request debounced. Exiting.", 0)
         log ("syncTasmota", "Elapsed time of ${elapsed}ms is less than debounce limit of ${settings.debounce}. This can be adjusted in settings.", 1)
     }
 }
 //*****************************************************************************************************************************************************************************************************
+//******
 //****** End of syncTasmota()
+//******
 //*****************************************************************************************************************************************************************************************************
 
 
@@ -440,7 +413,7 @@ def statusResponse(body){
         state.lastSensorData = new Date().format('yyyy-MM-dd HH:mm:ss')
         
         //Update the Power\Watts information.
-        if (settings.plugType.toInteger() >= 1){
+        if (settings.switchType.toInteger() >= 1){
             if (body?.STATUSSNS?.ENERGY?.POWER != null ) {
                 log("updateData", "Watts is: ${body.STATUSSNS.ENERGY.POWER}" , 2)
                 sendEvent(name: "power", value: body.STATUSSNS.ENERGY.POWER ) 
@@ -448,7 +421,7 @@ def statusResponse(body){
         }
             
         //Do not send Current and Voltage events if reduced reporting has been selected    
-        if (settings.plugType.toInteger() == 2){
+        if (settings.switchType.toInteger() == 2){
             if (body?.STATUSSNS?.ENERGY?.CURRENT != null ) {  log("updateData", "Current is: ${body.STATUSSNS.ENERGY.CURRENT}" , 2)  ;  sendEvent(name: "current", value: body.STATUSSNS.ENERGY.CURRENT ) }
             if (body?.STATUSSNS?.ENERGY?.VOLTAGE != null ) {  log("updateData", "Voltage is: ${body.STATUSSNS.ENERGY.VOLTAGE}" , 2)  ;  sendEvent(name: "voltage", value: body.STATUSSNS.ENERGY.VOLTAGE ) }  
         }
@@ -463,59 +436,38 @@ def statusResponse(body){
         }
     log ("statusResponse","Closing Transaction", 1)
     state.inTransaction = false
-   	log ("statusResponse","Exiting", 0)
+   	log ("statusResponse","Exiting", 1)
    }
 
-//*****************************************************************************************************************************************************************************************************
-//****** End of statusResponse()
-//*****************************************************************************************************************************************************************************************************
+//******** End of statusResponse() ***************************************************************************************************************************************************************************
 
 
 //*************************************************************************************************************************************************************************************************************
 //******
 //****** UNIQUE: Installs the rule onto the Tasmota device and enables it.
-//******	     Note that the variables are initially empty and the bulb has go through a change in Power, Color, Dimmer, CT, Fade and Speed before the values are all populated.
-//******         This function is very unique on a driver by driver basis as the triggers are all different.
+//	    	 Note that the variables are initially empty and the bulb has go through a change in Power, Color, Dimmer, CT, Fade and Speed before the values are all populated.
+// 	         This function is very unique on a driver by driver basis as the triggers are all different.
 //******
 //*************************************************************************************************************************************************************************************************************
 
 def tasmotaInjectRule(){
     log ("Action - tasmotaInjectRule","Injecting Rule3 into Tasmota Host. To verify go to Tasmota console and type: rule 3", 0)
     state.ruleInjection = true
-    
-    //Simple Plug - no power monitoring
-    if ( settings.plugType.toInteger() == 0 ) {
-        rule3 = "ON Power1#state DO webquery http://" + settings.HubIP + ":39501/ POST {'TSync':'True','Switch':'%value%','Current':'','Voltage':'','Watts':''} ENDON "
-        }
-    
-    //Plug monitoring only Watts
-    if ( settings.plugType.toInteger() == 1 ) {
-        rule3 = "ON Power1#state DO backlog var11 %value% ; RuleTimer1 1 ENDON "
-        rule3 = rule3 + "ON Tele-Energy#Power DO backlog0 var14 %value% ; RuleTimer1 1 ENDON "
-        rule3 = rule3 + "ON Rules#Timer=1 DO var15 %var11%,%var14% ENDON "
-        rule3 = rule3 + "ON var15#State\$!%var16% DO backlog ; var16 %var15% ; webquery http://" + settings.HubIP + ":39501/ POST {'TSync':'True','Switch':'%var11%','Current':'','Voltage':'','Watts':'%var14%'} ENDON "
-    }
-    
-    //Plug monitoring everything
-    if ( settings.plugType.toInteger() == 2 ) {
-        rule3 = "ON Power1#state DO backlog var11 %value% ; RuleTimer1 1 ENDON "
-        rule3 = rule3 + "ON Tele-Energy#Current DO backlog0 var12 %value% ; RuleTimer1 1 ENDON "
-        rule3 = rule3 + "ON Tele-Energy#Voltage DO backlog0 var13 %value% ; RuleTimer1 1 ENDON "
-        rule3 = rule3 + "ON Tele-Energy#Power DO backlog0 var14 %value% ; RuleTimer1 1 ENDON "
-        rule3 = rule3 + "ON Rules#Timer=1 DO var15 %var11%,%var12%,%var13%,%var14% ENDON "
-        rule3 = rule3 + "ON var15#State\$!%var16% DO backlog ; var16 %var15% ; webquery http://" + settings.HubIP + ":39501/ POST {'TSync':'True','Switch':'%var11%','Current':'%var12%','Voltage':'%var13%','Watts':'%var14%'} ENDON "
-    }
-    
+    //Assemble the rule. It is broken up this way for readibility and debugging.
+    rule3 = "ON Power1#State DO backlog0 Var13 %value% ; RuleTimer1 1 ENDON "
+    rule3 = rule3 + "ON Power2#state DO backlog0 Var14 %value% ; RuleTimer1 1 ENDON "
+    rule3 = rule3 + "ON Rules#Timer=1 DO Var15 %Var13%,%Var14% ENDON "
+    rule3 = rule3 + "ON Var15#State\$!%Var16% DO backlog ; Var16 %Var15% ; webquery http://" + settings.HubIP + ":39501 POST {'TSync':'True','Switch1':'%Var13%','Switch2':'%Var14%'} ENDON "
+
     //Now install the rule onto Tasmota
     callTasmota("RULE3", rule3)
     
-    //Now make sure the rule is turned on.
+    //and then make sure the rule is turned on.
     command = "RULE3 ON"
     def parameters = ["BACKLOG","${command}"]
     //Runs the prepared BACKLOG command after the latest that last command could have finished.
     runInMillis(remainingTime() + 50, "callTasmota", [data:parameters])
     }
-
     
 //*********************************************************************************************************************************************************************
 //******
