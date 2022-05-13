@@ -1,7 +1,7 @@
 /**
 *  Copyright 2022 Gary J. Milne
 *
-*  Version: v0.93B\0.97
+*  Version: v0.95\0.97
 *
 *  This program is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -16,6 +16,8 @@
 *  Version 0.91 - Internal version
 *  Version 0.93A - Division of Switch type to allow driver to support simple and PM switches.
 *  Version 0.93B - Enhancement of Tasmota rules to provide more granular data. Two different rules for simple vs PM switches.
+*  Version 0.94 - Added Brighter and Dimmer commands.
+*  Version 0.95 - Added Toggle, Fade and FadeSpeed capabilities. 
 *
 *  CORE - IDENTICAL - CHANGELOG
 *  All changes to code in the CORE section will be commented here. Changes to the UNIQUE section that are made across all drivers will also be commented here.
@@ -58,10 +60,14 @@ metadata {
         capability "SwitchLevel"        
         capability "Refresh"
 
+        command "brighter"
+        command "dimmer"
+        command "fadeSpeed", [ [name:"Duration in seconds for a dimmer transation to complete (Persistent). FadeSpeed attribute will be 2X this number.*", type: "STRING", description: "The time in seconds (0 - 20) for any transition operation to complete. fadeSpeed will display as 2X this value as Tasmota uses 0.5 seconds intervals. Note: Fade must be turned on for this setting to have any effect."] ]
+        command "fadeToggle"
         command "initialize"
         command "tasmotaInjectRule"
         command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "An optional single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
-	command "toggle"
+        command "toggle"
         //command "test"
         
         //Internally named variables that must be lower case
@@ -69,6 +75,8 @@ metadata {
         attribute "level", "number"
 
 		//Driver specific variables where case does not matter.
+        attribute "Fade", "string"
+        attribute "FadeSpeed", "string"  
         attribute "Status", "string"  
 	}
     section("Configure the Inputs"){
@@ -130,7 +138,9 @@ def initialize(){
    	//To be safe these are populated with initial values to prevent a null return if they are used as logic flags
     if ( state.Action == null ) state.Action = "None"
     if ( state.ActionValue == null ) state.ActionValue = "None"
-    if ( device.currentValue("Status") == null ) updateStatus("Complete")    
+    if ( device.currentValue("Status") == null ) updateStatus("Complete") 
+    if ( device.currentValue("Fade") == null ) sendEvent(name: "Fade", value: "Unknown")
+    if ( device.currentValue("FadeSpeed") == null ) sendEvent(name: "FadeSpeed", value: "Unknown")
           
     //Do a refresh to sync the device driver
     refresh()
@@ -162,6 +172,53 @@ def off() {
 	log("Action", "Turn off switch", 0)
     callTasmota("POWER", "off")
 	}
+
+//Toggles the Fade function off and on
+void fadeToggle() {
+    log ("Action - fadeToggle", "Toggle Fade", 0)
+    if ( device.currentValue("Fade").equalsIgnoreCase("on") ){
+        newstate = "off"
+        }
+    else
+        {
+        newstate = "on"
+        }
+    callTasmota("FADE", newstate )
+    log ("fadeToggle", "Exiting", 1)
+}
+
+//This FadeSpeed function uses the Speed command which is a persistent value (as opposed to SPEED2)
+void fadeSpeed(fadeSpeed) {
+    log ("Action - fadeSpeed", "Change fadeSpeed to ${fadeSpeed}", 0)
+    //Test to see if the fadeSpeed is a valid integer
+    try {
+        fadeSpeed = fadeSpeed.toInteger()
+        if (fadeSpeed > 20) {fadeSpeed = 20}
+        if (fadeSpeed < 0) {fadeSpeed = 0}
+        }
+    catch (Exception e) {
+        log ("Fade", "Error: Invalid fadeSpeed. Should be a numeric value between 0 and 20.", -1)
+        return
+        } 
+    callTasmota("Speed", fadeSpeed * 2 )
+    log ("fadeSpeed", "Exiting", 1)
+}
+
+
+//This Brighter function increments the brightness of the dimmer setting.
+void brighter() {
+    log ("Action - brighter", "Increasing brightness", 0)
+    callTasmota("DIMMER", "+" )
+    log ("brighter", "Exiting", 1)
+}
+
+//This Dimmer function increments the brightness of the dimmer setting.
+void dimmer() {
+    log ("Action - dimmer", "Decreasing brightness", 0)
+    callTasmota("DIMMER", "-" )
+    log ("dimmer", "Exiting", 1)
+}
+
 
 //*********************************************************************************************************************************************************************
 //******
@@ -262,19 +319,59 @@ def hubitatResponse(body){
                 }
             	break
             
-            case ["DIMMER"]:  //Usually referred to as Dimmer in Hubitat
+            case ["DIMMER"]:  //Usually referred to as Level in Hubitat
                 log("hubitatResponse", "Command: Dimmer ${body.DIMMER}", 1)
-                if (ActionValue.toInteger() == body.DIMMER.toInteger()){
-                	log ("hubitatResponse", "Dimmer applied successfully", 0)
-                    updateStatus("Complete:Success")
-                    sendEvent(name: "level", value: ActionValue, displayed:true, isStateChange: true)
-                    sendEvent(name: "switch", value: "on", displayed:true)
-                    } 
-                else {
-                    updateStatus("Complete:Fail")                
-                    log("hubitatResponse","Dimmer state failed to apply", -1)
+                //We may use dimmer + or dimmer - to increment or decrement the actual dimmer brightness.
+                //So we need to handle a non numeric condi
+                if (isValidInteger(ActionValue) == true) {
+                    if ( ActionValue.toInteger() == body.DIMMER.toInteger() ){
+                	    log ("hubitatResponse", "Dimmer applied successfully", 0)
+                        updateStatus("Complete:Success")
+                        sendEvent(name: "level", value: ActionValue, displayed:true, isStateChange: true)
+                        sendEvent(name: "switch", value: "on", displayed:true)
+                        } 
+                    else {
+                        updateStatus("Complete:Fail")                
+                        log("hubitatResponse","Dimmer state failed to apply", -1)
+                        }
                     }
+                else {
+                    //ActionValue was non numeric so we have to assume the new value was a correct increment or decerement.
+                    log ("hubitatResponse", "Dimmer ${ActionValue} applied successfully", 0)
+                    updateStatus("Complete:Success")
+                    sendEvent(name: "level", value: body.DIMMER.toInteger(), displayed:true, isStateChange: true)
+                    sendEvent(name: "switch", value: "on", displayed:true)
+                } 
+                break
+            
+            case ["FADE"]:  //This refers to the fade. 
+                log("hubitatResponse", "Command FADE: ${body.FADE}", 1)
+                if (ActionValue.toUpperCase() == body.FADE){
+                    log ("hubitatResponse","Fade applied successfully: ${body.FADE.toLowerCase()}", 0)
+                    sendEvent(name:"Fade", value: "${body.FADE.toLowerCase()}", displayed:true, isStateChange: true)
+                    updateStatus("Complete:Success")
+                } 
+            else 
+                {
+                log("hubitatResponse","Fade failed to apply", -1)
+                updateStatus("Complete:Fail")
+                }
             	break
+                
+            case ["SPEED"]:  //This refers to the Speed of the fade. Larger numbers are longer.
+                log("hubitatResponse", "Command Speed: ${body.SPEED}", 1)
+                if (ActionValue.toInteger() == body.SPEED.toInteger() ){
+                	log ("hubitatResponse","Fade Speed applied successfully: ${body.SPEED}", 0)
+                    sendEvent(name:"FadeSpeed", value: "${body.SPEED}", displayed:true, isStateChange: true)
+                    updateStatus("Complete:Success")
+                } 
+            else 
+                {
+                log("hubitatResponse","Fade Speed failed to apply", -1)
+                updateStatus("Complete:Fail")
+                }
+            	break
+                
                 
             case ["BACKLOG"]:
                 //Backlog commands do not return anything useful to indicate success or failure.  A typical response might be [WARNING:Enable weblog 2 if response expected]. But the bulb may be in weblog 4 and get a different response.
@@ -307,6 +404,9 @@ def hubitatResponse(body){
    	log ("hubitatResponse","Exiting", 1)
    }
 
+def isValidInteger(value) {
+    value instanceof Integer
+}
 
 //*****************************************************************************************************************************************************************************************************
 //******
@@ -348,16 +448,19 @@ def syncTasmota(body){
         body = parseJson(body)
         
         //Preset the values for when the %vars% are empty
-        switch1 = -1 ; dimmer = -1
+        switch1 = -1 ; dimmer = -1 ; fade = "SAME" ; fadespeed = -1
         
         //A value of '' for any of these means no update. Probably because the device has restarted and the %vars% have not repopulated. This is expected.
         if (body?.SWITCH != '') { switch1 = body?.SWITCH ; log ("syncTasmota","Switch is: ${switch1}", 2) }
         if (body?.DIMMER != '') { dimmer = body?.DIMMER.toInteger() ; log ("syncTasmota","Dimmer is: ${dimmer}", 2) }
+        if (body?.FADE != '') { fade = body?.FADE ; log ("syncTasmota","Fade is: ${fade}", 2) }
+        if (body?.SPEED != '') { speed = body?.SPEED.toInteger() ; log ("syncTasmota","FadeSpeed is: ${speed}", 2) }
         
         //Only changes will get logged so we can report everything. 
         if ( switch1.toInteger() == 0 ) sendEvent(name: "switch", value: "off", descriptionText: "The switch was turned off.")
         if ( switch1.toInteger() == 1 ) sendEvent(name: "switch", value: "on", descriptionText: "The switch was turned on.")
-        
+        if ( fade != "SAME" ) sendEvent(name: "Fade", value: fade.toLowerCase())
+        if ( speed >= 0 ) sendEvent(name: "FadeSpeed", value: "${speed}")
         //Send dimmer events if we have new data. Ignore anything less than 0.
         if ( dimmer >= 0 ) sendEvent(name: "level", value: dimmer, unit: "Percent" )
         
@@ -437,11 +540,13 @@ def tasmotaInjectRule(){
     log ("Action - tasmotaInjectRule","Injecting Rule3 into Tasmota Host. To verify go to Tasmota console and type: rule 3", 0)
     state.ruleInjection = true
     
-    rule3 = "ON Power1#State DO backlog0 Var13 %value% ; RuleTimer1 1 ENDON "
-    rule3 = rule3 + "ON Dimmer DO backlog0 Var14 %value% ; RuleTimer1 1 ENDON "
-    rule3 = rule3 + "ON Rules#Timer=1 DO Var15 %Var13%,%Var14% ENDON "
+    rule3 = "ON Power1#State DO backlog0 Var11 %value% ; RuleTimer1 1 ENDON "
+    rule3 = rule3 + "ON Dimmer DO backlog0 Var12 %value% ; RuleTimer1 1 ENDON "
+    rule3 = rule3 + "ON Fade#Data DO backlog Var13 %value% ; RuleTimer1 1 ENDON "
+    rule3 = rule3 + "ON Speed#Data DO backlog0 Var14 %value% ; RuleTimer1 1 ENDON "
+    rule3 = rule3 + "ON Rules#Timer=1 DO Var15 %Var11%,%Var12%,%Var13%,%Var14% ENDON "
     //We have to use single quotes here as there is no way to pass a double quote via a URL. We will replace the single quote with a double quote when we get a response back so it can be handled as JSON.
-    rule3 = rule3 + "ON Var15#State\$!%Var16% DO backlog ; Var16 %Var15% ; webquery http://" + settings.HubIP + ":39501 POST {'TSync':'True','Switch':'%Var13%','Dimmer':'%Var14%'} ENDON "
+    rule3 = rule3 + "ON Var15#State\$!%Var16% DO backlog ; Var16 %Var15% ; webquery http://" + settings.HubIP + ":39501 POST {'TSync':'True','Switch':'%Var11%','Dimmer':'%Var12%','Fade':'%Var13%','Speed':'%Var14%'} ENDON "
     
     //Now install the rule onto Tasmota
     callTasmota("RULE3", rule3)
@@ -1178,6 +1283,7 @@ def cleanURL(path){
     path = path?.replace(" ","%20") 
     path = path?.replace("#","%23") 
     path = path?.replace("\$","%24") 
+    path = path?.replace("+","%2B") 
     path = path?.replace(":","%3A") 
     path = path?.replace(";","%3B") 
     path = path?.replace("<","%3C") 
@@ -1199,7 +1305,6 @@ def remainingTime(){
     log ("remainingTime", "Remaining time ${remainingTime}", 3)
     return remainingTime  
 }
-
 
 
 //*********************************************************************************************************************************************************************
