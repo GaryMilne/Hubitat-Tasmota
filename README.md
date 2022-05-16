@@ -8,8 +8,8 @@ There are 6 unique drivers.<br/>
 5) Switch with Fan<br/>
 6) Switch with Temp and Humidity Sensor<br/>
 <br/>In addition to the drivers there are 2 documentation files.<br/>
-i) How to Upgrade from Tasmota 8.X to Tasmota 11.X <br/>
-ii) Tasmota Sync Documentation (Installation guide for all drivers) <br/>
+#1 How to Upgrade from Tasmota 8.X to Tasmota 11.X <br/>
+#2 Tasmota Sync Documentation (Installation guide for all drivers) <br/>
 <br/>
 Hit me up on Hubitat community @garyjmilne if you have any questions.<br/>
 Last Updated 5/16/22.<br/>
