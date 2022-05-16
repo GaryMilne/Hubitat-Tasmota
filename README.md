@@ -1,6 +1,6 @@
 # Hubitat <<-->> Tasmota Sync Drivers<br/>
 Respository for Hubitat Tasmota Sync Drivers<br/>
-There are 6 unique drivers.<br/>
+There are 6 unique drivers that perform realtime native synchronisation between Tasmota 11.X and Hubitat. No special compilation of Tasmota or webhooks required. Drivers use Tasmota triggers and rules to notify Hubitat using a JSON sync whenever a monitored parameter changes such as power, color, dimmer, watts etc.<br/>
 1) Color Bulb<br/>
 2) Plug\Switch with optional power monitoring.<br/>
 3) Dual Plug\Switch (No power monitoring).<br/>
