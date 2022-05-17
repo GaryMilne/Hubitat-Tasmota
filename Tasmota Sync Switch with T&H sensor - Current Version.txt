@@ -1,13 +1,13 @@
 /**
 *  Copyright 2022 Gary J. Milne
 *
-*  Version: v0.92\0.97
+*  Version: v0.94B\0.97
 *
 *  This program is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
 *  the Free Software Foundation.
 *
-*  This driver is one of several in the Tasmota Sync series. (Bulb, Plug, Dual Outlet, Dimmer Switch, Switch with Fan, Switch with Sensor (Temp & Humidity). All of these drivers are very similar and much of the code is identical.
+*  This driver is one of several in the Tasmota Sync series. (Bulb, Plug\Switch(PM Optional), Dual Switch, Dimmer Switch, Switch with Fan, Switch with Sensor (Temp & Humidity). All of these drivers are very similar and much of the code is identical.
 *  To simplifiy maintenance all of these drivers have two sections. Search for the phrase "END OF UNIQUE FUNCTIONS" to find the split.
 *  #1 The top section contains code that is UNIQUE to a specific driver such as a bulb vs a switch vs a dimmer. Although this code is UNIQUE it is very similar between drivers.
 *  #2 The bottom section is code that is IDENTICAL and shared across all drivers and is about 700 - 800 lines of code. This section of code is referred to as CORE.
@@ -16,6 +16,8 @@
 *  Version 0.91 - Internal version
 *  Version 0.92 - Added fixed logic for extracting for SI7102
 *  Version 0.93 - Virtualized the name of the sensor and added it to settings.
+*  Version 0.94 - Added support for a broad range of sensors and capabilities. Driver will look for any data in sensor field and populate the attribute if found.
+*  Version 0.94B - Fixed error in RULE3 where sensorname was not virtualized.
 *
 *  CORE - IDENTICAL - CHANGELOG
 *  All changes to code in the CORE section will be commented here. Changes to the UNIQUE section that are made across all drivers will also be commented here.
@@ -53,30 +55,52 @@
 import groovy.json.JsonSlurper
 
 metadata {
-		definition (name: "Tasmota Sync - Switch with T&H Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Tasmota%20Sync%20Switch%20with%20T%26H%20sensor%20-%20Current%20Version.txt", singleThreaded: true )  {
-        capability "Power Meter"
+		definition (name: "Tasmota Sync - Switch with Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Tasmota%20Sync%20Switch%20with%20sensor%20-%20Current%20Version.txt", singleThreaded: true )  {
+        //capability "AirQuality"
+        //capability "CarbonDioxideMeasurement"
+        //capability "IlluminanceMeasurement"
+        //capability "LiquidFlowRate"
+        //capability "PressureMeasurement"
         capability "Refresh"
         capability "RelativeHumidityMeasurement"
+        //capability "SoundPressureLevel"
+        //capability "UltravioletIndex"
+        //capability "pHMeasurement"
         capability "Sensor"
         capability "Switch"
         capability "TemperatureMeasurement"
-
+                
         command "initialize"
         command "tasmotaInjectRule"
         command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "A single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
         command "tasmotaTelePeriod", [ [name:"Seconds*", type: "STRING", description: "The number of seconds between Tasmota data updates (TelePeriod XX)."] ]
         command "toggle"
-        //command "test"
+        command "test"
         
-        //Internally named variables that must be lower case
-        attribute "dewPoint", "number"
-        attribute "humidity", "number"
+        //Internally named variables that must be lower case. These will not be initialized until data is received for this type of sensor.
+        //Attributtes do not display in the Attribute State when they are null.
         attribute "switch", "string"
-        attribute "temperature", "number"
-        attribute "tempUnit", "string"
+        //attribute "airQualityIndex", "number"        //range 0 - 500
+        //attribute "carbonDioxide", "number"          //unit ppm                //Tasmota example: {"Time":"2020-01-01T00:00:00","IAQ":{"eCO2":450,"TVOC":125,"Resistance":76827}}
+        //attribute "carbonMonoxide", "number"         //unit ppm
+        attribute "humidity", "number"                //unit %rh               //Tasmota example: {"Time":"2022-05-17T03:33:05","SI7021":{"Temperature":69,"Humidity":28,"DewPoint":34},"TempUnit":"F"}
+        //attribute "illuminance", "number"             //unit lx                //Tasmota example: {"Time":"2019-11-03T20:45:37","BH1750":{"Illuminance":79}}  {"Time":"2019-11-03T21:04:05","TSL2561":{"Illuminance":21.180}}
+        //attribute "rate", "number"                    //unit LPM || GPM
+        //attribute "pressure", "number"                //unit Pa || PSI        //Tasmota example: {"Time": "2019-11-03T19:34:28","BME280": {"Temperature": 21.7,"Humidity": 66.6,"Pressure": 988.6},"PressureUnit": "hPa","TempUnit": "C"}
+        //attribute "soundPressureLevel", "number"      //unit dB
+        attribute "temperature", "number"            //unit F || C            //Tasmota example: {"Time":"2022-05-17T03:33:05","SI7021":{"Temperature":69,"Humidity":28,"DewPoint":34},"TempUnit":"F"}
+        attribute "tempUnit", "string"                                        //Tasmota example: {"Time":"2022-05-17T03:33:05","SI7021":{"Temperature":69,"Humidity":28,"DewPoint":34},"TempUnit":"F"}
+        //attribute "ultravioletIndex", "number"        //unit none provided
+        //attribute "pH", "number"                      //unit none provided
+        //attribute "rssi", "number"
+            
+       //Sensor inputs without Hubitat defined equivalent attributes. This list is limited to those sensors supported by the pre-compiled version of Tasmota
+       //distance {"Time":"2019-01-01T22:42:35","SR04":{"Distance":16.754}}
         
-		//Driver specific variables where case does not matter.
+        //Driver specific variables where case does not matter.
         attribute "Status", "string"
+        attribute "dewPoint", "number"
+        attribute "distance", "number"
 	}
     
         section("Configure the Inputs"){
@@ -98,7 +122,7 @@ metadata {
 
 //Function used for quickly testing out logic and cleaning up.
 def test(){
-    state.remove("starttime")
+    //state.remove("starttime")
 }
 
 //*********************************************************************************************************************************************
@@ -259,6 +283,7 @@ def hubitatResponse(body){
             def wifi = body.WIFI
             def RSSI = wifi.RSSI
             state.RSSI = RSSI
+            sendEvent(name: "rssi", value: RSSI, descriptionText: "The WiFi RSSI has changed.", isStateChange: true )
             log ("hubitatResponse", "RSSI: ${state.RSSI}", 2)
             }
         
@@ -459,13 +484,16 @@ def statusResponse(body){
 def tasmotaInjectRule(){
     log ("Action - tasmotaInjectRule","Injecting Rule3 into Tasmota Host. To verify go to Tasmota console and type: rule 3", 0)
     state.ruleInjection = true
+    sensorName = settings.sensorName
     
     rule3 = "ON Power1#state DO backlog var11 %value% ; RuleTimer1 1 ENDON "
-    rule3 = rule3 + "ON Tele-SI7021#Temperature DO backlog0 var12 %value% ; RuleTimer1 1 ENDON "
-    rule3 = rule3 + "ON Tele-SI7021#Humidity DO backlog0 var13 %value% ; RuleTimer1 1 ENDON "
-    rule3 = rule3 + "ON Tele-SI7021#Dewpoint DO backlog0 var14 %value% ; RuleTimer1 1 ENDON "
+    rule3 = rule3 + "ON Tele-${sensorName}#Temperature DO backlog0 var12 %value% ; RuleTimer1 1 ENDON "
+    rule3 = rule3 + "ON Tele-${sensorName}#Humidity DO backlog0 var13 %value% ; RuleTimer1 1 ENDON "
+    rule3 = rule3 + "ON Tele-${sensorName}#Dewpoint DO backlog0 var14 %value% ; RuleTimer1 1 ENDON "
     rule3 = rule3 + "ON Rules#Timer=1 DO var15 %var11%,%var12%,%var13%,%var14% ENDON "
     rule3 = rule3 + "ON var15#State\$!%var16% DO backlog ; var16 %var15% ; webquery http://" + settings.HubIP + ":39501/ POST {'TSync':'True','Switch':'%var11%','Temperature':'%var12%','Humidity':'%var13%','DewPoint':'%var14%'} ENDON "
+    
+    // if ( STATUSSNS?."$sensorName" != null ) 
 
     //Now install the rule onto Tasmota
     callTasmota("RULE3", rule3)
@@ -1200,6 +1228,7 @@ def cleanURL(path){
     path = path?.replace(" ","%20") 
     path = path?.replace("#","%23") 
     path = path?.replace("\$","%24") 
+    path = path?.replace("+","%2B") 
     path = path?.replace(":","%3A") 
     path = path?.replace(";","%3B") 
     path = path?.replace("<","%3C") 
