@@ -1,0 +1,82 @@
+{
+  "packageName": "Tasmota Sync Drivers",
+  "author": "Gary J. Milne",
+  "version": "0.98.0",
+  "minimumHEVersion": "2.2.9",
+  "dateReleased": "2022-05-18",
+  "releaseNotes": "Initial Release of Tasmota Sync Drivers - Realtime & Native Synchronisation between Tasmota and Hubitat.",
+  "communityLink": "https://community.hubitat.com/t/tasmota-sync-drivers-native-and-real-time-synchronization-between-hubitat-and-tasmota-11/93651",
+  "documentationLink": "https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf",
+  "drivers": [
+    {
+      "id": "73766b85-a3d1-48ee-a306-ea8c22bfdd9d",
+      "name": "Tasmota Sync - Switch with Sensor",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Switch_with_Sensor.groovy",
+      "required": false,
+      "version": "0.98.0",
+      "categories": ["Integrations"],
+      "tags": ["Monitoring","Energy Monitoring"]
+    },
+    {
+      "id": "865b186a-f150-4dad-9206-3faa7ceffc65",
+      "name": "Tasmota Sync - Color Bulb",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Color_Bulb.groovy",
+      "required": false,
+      "version": "0.98.0",
+      "categories": ["Integrations"],
+      "tags": ["Lights & Switches"]
+    },
+    {
+      "id": "e76a3277-20d3-42c0-a70d-668ff54bd610",
+      "name": "Tasmota Sync - Dimmer Switch",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dimmer_Switch.groovy",
+      "required": false,
+      "version": "0.98.0",
+      "categories": ["Integrations"],
+      "tags": ["Lights & Switches"]
+    },
+    {
+      "id": "70df6bd5-cc59-41fe-9ebd-e26a9313f0b1",
+      "name": "Tasmota Sync - Dual Switch\\\\Plug",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Switch_Plug.groovy",
+      "required": false,
+      "version": "0.98.0",
+      "categories": ["Integrations"],
+      "tags": ["Lights & Switches"]
+    },
+    {
+      "id": "e3f1cfd1-9a9d-4d87-8a7c-4f5ee43aac4b",
+      "name": "Tasmota Sync - Fan",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Fan.groovy",
+      "required": false,
+      "version": "0.98.0",
+      "categories": ["Integrations"],
+      "tags": ["Lights & Switches","Misc. Devices"]
+    },
+    {
+      "id": "4818eca9-8ebe-46dc-86ee-0131b04407af",
+      "name": "Tasmota Sync - Switch\\\\Plug",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Switch_Plug.groovy",
+      "required": false,
+      "version": "0.98.0",
+      "categories": ["Integrations"],
+      "tags": ["Lights & Switches","Energy Monitoring"]
+    },
+    {
+      "id": "959bf58f-f612-414c-acb2-9d77b71595a8",
+      "name": "Tasmota Sync - Switch with Sensor",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Switch_with_Sensor.groovy",
+      "required": false,
+      "version": "0.98.0",
+      "categories": ["Integrations"],
+      "tags": ["Lights & Switches","Temperature & Humidity","Misc. Devices"]
+    }
+  ]
+}
