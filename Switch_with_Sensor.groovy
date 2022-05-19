@@ -1,11 +1,10 @@
 /**
-*  Tasmota Sync Bulb Driver
+*  Tasmota Sync Switch with Sensors Driver
 *  Version: v0.96.0
-*  Download: https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota_Sync_Bulb.groovy
+*  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Bulb. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
 *  Copyright 2022 Gary J. Milne
-*
 *
 *  This program is free software: you can redistribute it and/or modify
 *  it under the terms of the GNU General Public License as published by
@@ -46,9 +45,7 @@ import groovy.transform.Field
 @Field static final sensor2UnitSuffix = ['TEMPERATURE' : 'Degrees', 'HUMIDITY' : '% RH', 'DEWPOINT' : 'Degrees', 'ILLUMINANCE' : 'lux']
 
 metadata {
-	definition (name: "Tasmota Sync - Switch with Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.github.com/GaryMilne/Hubitat-Tasmota/blob/main/Switch_with_Sensor.groovy", singleThreaded: true )  
-
-	{
+		definition (name: "Tasmota Sync - Switch with Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Switch_with_Sensor.groovy", singleThreaded: true )  {
         //capability "AirQuality"
         //capability "CarbonDioxideMeasurement"
         //capability "IlluminanceMeasurement"
@@ -605,7 +602,6 @@ def tasmotaInjectRule(){
 *  Version 0.98.0 - Changed versioning to comply with Semantic Versioning standards (https://semver.org/). Moved CORE changelog to beginning of CORE section.
 *
 */
-
 
 //*********************************************************************************************************************************************************************
 //******
