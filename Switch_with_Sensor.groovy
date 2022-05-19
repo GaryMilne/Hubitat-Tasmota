@@ -46,7 +46,12 @@ import groovy.transform.Field
 @Field static final sensor2UnitSuffix = ['TEMPERATURE' : 'Degrees', 'HUMIDITY' : '% RH', 'DEWPOINT' : 'Degrees', 'ILLUMINANCE' : 'lux']
 
 metadata {
-		definition (name: "Tasmota Sync - Switch with Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Switch_with_Sensor.groovy", singleThreaded: true )  {
+	definition (name: "Tasmota Sync - Switch with Sensor", 
+	namespace: "garyjmilne", 
+	author: "Gary J. Milne", 
+	importUrl: "https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Switch_with_Sensor.groovy", singleThreaded: true )  
+
+	{
         //capability "AirQuality"
         //capability "CarbonDioxideMeasurement"
         //capability "IlluminanceMeasurement"
