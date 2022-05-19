@@ -1,6 +1,6 @@
 /**
-*  Tasmota Sync Plug\Switch Driver - Supports Power Monitoring
-*  Version: v0.95.0
+*  Tasmota Sync Switch\Plug Driver - Supports Power Monitoring
+*  Version: v0.98.0
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Bulb. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -21,6 +21,7 @@
 *  Version 0.93 - Allow user to select a reduced set of properties to operate on to minimize data reporting.
 *  Version 0.94 - Changed driver name\references from Switch to Plug.
 *  Version 0.95.0 - Changed versioning to comply with Semantic Versioning standards (https://semver.org/). Moved CORE changelog to beginning of CORE section. Added links 
+*  Version 0.98.0 - All versions incremented and synchronised for HPM plublication
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -35,7 +36,7 @@
 import groovy.json.JsonSlurper
 
 metadata {
-		definition (name: "Tasmota Sync - Plug\\Switch", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Plug_Switch.groovy", singleThreaded: true )  {
+		definition (name: "Tasmota Sync - Switch\\Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Switch_Plug.groovy", singleThreaded: true )  {
         capability "Switch"
         capability "Refresh"
         capability "PowerMeter"

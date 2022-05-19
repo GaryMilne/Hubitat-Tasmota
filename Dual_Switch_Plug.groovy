@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Dual Switch\Plug Driver
-*  Version: v0.92.0
+*  Version: v0.98.0
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Bulb. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -18,6 +18,7 @@
 *  DUAL SWITCH - UNIQUE - CHANGELOG
 *  Version 0.91 - Internal version
 *  Version 0.92.0 - Changed versioning to comply with Semantic Versioning standards (https://semver.org/). Moved CORE changelog to beginning of CORE section. Added links 
+*  Version 0.98.0 - All versions incremented and synchronised for HPM plublication
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:

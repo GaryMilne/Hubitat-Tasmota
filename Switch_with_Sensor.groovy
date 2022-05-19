@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Switch with Sensors Driver
-*  Version: v0.96.0
+*  Version: v0.98.0
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Bulb. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -23,6 +23,7 @@
 *  Version 0.94 - Added support for a broad range of sensors and capabilities. Driver will look for any data in sensor field and populate the attribute if found.
 *  Version 0.95 - Changed sensor methodology to iterate all sensor fields, pair them with Hubitat attributes and update the data accordingly. Theoretically this makes the driver capable of working with any type of sensor and any data field with only adding a few names to the sensorMap FIELDS.
 *  Version 0.96.0 - Changed versioning to comply with Semantic Versioning standards (https://semver.org/). Moved CORE changelog to beginning of CORE section. Added links 
+*  Version 0.98.0 - All versions incremented and synchronised for HPM plublication
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:

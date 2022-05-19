@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Bulb Driver
-*  Version: v0.94.0
+*  Version: v0.98.0
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Bulb. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -21,6 +21,7 @@
 *  Version 0.92A - Made ENUM fields for commands required and cleaned up error handling logic.
 *  Version 0.93 - Color changes use COLOR when dimmer at 100% and COLOR2 when dimmer less than 100% to preserve dimmer value.
 *  Version 0.94.0 - Changed versioning to comply with Semantic Versioning standards (https://semver.org/). Moved CORE changelog to beginning of CORE section.
+*  Version 0.98.0 - All versions incremented and synchronised for HPM plublication
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
