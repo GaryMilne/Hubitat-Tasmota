@@ -55,7 +55,7 @@
 import groovy.json.JsonSlurper
 
 metadata {
-		definition (name: "Tasmota Sync - Color Bulb", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Tasmota%20Sync%20Bulb%20-%20Current%20Version.txt", singleThreaded: true )  {
+		definition (name: "Tasmota Sync Bulb", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota_Sync_Bulb.groovy", singleThreaded: true )  {
         capability "ColorControl"
 		capability "ColorTemperature"
         capability "Light"
