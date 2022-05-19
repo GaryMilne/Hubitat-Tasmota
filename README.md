@@ -12,5 +12,6 @@ There are 7 unique drivers that perform realtime native synchronisation between 
 1. How to Upgrade from Tasmota 8.X to Tasmota 11.X <br/>
 2. Tasmota Sync Documentation (Installation guide for all drivers) <br/>
 <br/>
+Main thread on Hubitat is: https://community.hubitat.com/t/tasmota-sync-drivers-native-and-real-time-synchronization-between-hubitat-and-tasmota-11/93651 <br/>
 Hit me up on Hubitat community @garyjmilne if you have any questions.<br/>
 Last Updated 5/18/22.<br/>
