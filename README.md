@@ -12,4 +12,4 @@ There are 6 unique drivers that perform realtime native synchronisation between 
 2. Tasmota Sync Documentation (Installation guide for all drivers) <br/>
 <br/>
 Hit me up on Hubitat community @garyjmilne if you have any questions.<br/>
-Last Updated 5/16/22.<br/>
+Last Updated 5/18/22.<br/>
