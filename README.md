@@ -8,8 +8,7 @@ There are 7 unique drivers that perform realtime native synchronisation between 
 5) Switch with Fan<br/>
 6) Switch with Sensor<br/>
 7) Sensor<br/>
-<br/>
-Drivers should be on Hubitat Package Manager shortly. Just waiting for inclusion in the HPM manifest.
+Drivers should be on Hubitat Package Manager shortly. Just waiting for inclusion in the HPM manifest. <br/>
 # In addition to the drivers there are 2 documentation files.<br/>
 1. How to Upgrade from Tasmota 8.X to Tasmota 11.X <br/>
 2. Tasmota Sync Documentation (Installation guide for all drivers) <br/>
