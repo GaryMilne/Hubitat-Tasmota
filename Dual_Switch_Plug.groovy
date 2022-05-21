@@ -308,7 +308,7 @@ def hubitatResponse(body){
         }
     log ("hubitatResponse","Closing Transaction", 1)
     state.inTransaction = false
-   	log ("hubitatResponse","Exiting", 0)
+   	log ("hubitatResponse","Exiting", 1)
    }
 
 //*****************************************************************************************************************************************************************************************************
