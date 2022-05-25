@@ -65,7 +65,7 @@ metadata {
         command "tasmotaInjectRule"
         command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "A single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
         command "tasmotaTelePeriod", [ [name:"Seconds*", type: "STRING", description: "The number of seconds between Tasmota data updates (TelePeriod XX)."] ]
-        //command "test"
+        command "test"
         
         //Internally named variables that must be lower case. These will not be initialized until data is received for this type of sensor.
         //Attributtes do not display in the Attribute State when they are null.
@@ -429,7 +429,7 @@ def statusResponse(body){
         switch1 = STATUSSNS?.SWITCH1
         if (switch1 != null) {
             sendEvent(name: "switch1" , value: switch1.toLowerCase())
-            log("statusResponse", "STATUSSNS switch1 is: ${switch1.toLowerCase()}" , 1)    
+            log("statusResponse", "STATUSSNS switch1 is: ${switch1.toLowerCase()}" , 0)    
             }
         
         //Test to see if the Tasmota STATUS 8 has returned a STATUSSNS section that matches the sensor name specified in settings.
@@ -441,7 +441,7 @@ def statusResponse(body){
                 try {
                     //Lookup the Hubitat attribute name used for this sensor value
                     attribute = sensor2AttributeMap[it.key]
-                    log("statusResponse", "${it.key} sensor data (${it.value}) mapped to Hubitat attribute: ${attribute}" , 1)
+                    log("statusResponse", "${it.key} sensor data (${it.value}) mapped to Hubitat attribute: ${attribute}" , 0)
                     
                     //Hubitat will de-dupe updates that do not have changed values so we can report each time.
                     sendEvent(name: attribute, value: it.value )
