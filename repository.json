@@ -1,0 +1,17 @@
+{
+  "author": "Gary J. Milne",
+  "gitHubUrl": "https://github.com/garymilne",
+  "packages": [
+		{
+			"name": "Tasmota Sync Drivers",
+			"category": "Integrations",
+			"location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/packageManifest.json",
+			"description": "Tasmota Sync Drivers - Realtime & Native Synchronisation between Tasmota and Hubitat.",
+			"tags": [
+				"Lights & Switches",
+				"Temperature & Humidity",
+				"Misc. Devices"
+			]
+		}
+	]
+}
