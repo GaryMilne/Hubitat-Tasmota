@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Sensors Driver - This file is just a copy of the Switch with Sensors with the switch components disabled.  Other sensor data types will be added as I have someone to test them.
-*  Version: v0.98.0
+*  Version: v0.98.1
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Sensors. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -24,6 +24,7 @@
 *  Version 0.95 - Changed sensor methodology to iterate all sensor fields, pair them with Hubitat attributes and update the data accordingly. Theoretically this makes the driver capable of working with any type of sensor and any data field with only adding a few names to the sensorMap FIELDS.
 *  Version 0.96.0 - Changed versioning to comply with Semantic Versioning standards (https://semver.org/). Moved CORE changelog to beginning of CORE section. Added links 
 *  Version 0.98.0 - All versions incremented and synchronised for HPM plublication
+*  Version 0.98.1 - Added definitions for PM2.5 sensor data. Add logic to statusResponse() to handle a STATUSSNS "switch1" field used by some sensors.
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -39,11 +40,11 @@ import groovy.json.JsonSlurper
 import groovy.transform.Field
 
 //First item in the pair is the name of the Tasmota sensor data type in uppercase form. The second name is the driver attribute that will contain the data. They may be identical in some case and very different in others.
-@Field static final sensor2AttributeMap = ['TEMPERATURE' : 'temperature', 'HUMIDITY' : 'humidity', 'DEWPOINT' : 'dewPoint', 'ILLUMINANCE' : 'illuminance', 'ECO2' : 'airQualityIndex', 'PRESSURE' : 'pressure', 'GAS' : 'gas']
+@Field static final sensor2AttributeMap = ['TEMPERATURE' : 'temperature', 'HUMIDITY' : 'humidity', 'DEWPOINT' : 'dewPoint', 'ILLUMINANCE' : 'illuminance', 'ECO2' : 'airQualityIndex', 'PM2.5' : 'pm25' , 'PRESSURE' : 'pressure', 'GAS' : 'gas']
 //First item in the pair is the name of the Tasmota sensor data type in uppercase form. The second name is the name of the driver unit attribute for that type of data.  For example 'tempUnit' will contain either a 'C' or 'F' if temperature is a valid data field.
 @Field static final sensor2UnitMap = ['TEMPERATURE' : 'tempUnit', 'PRESSURE' : 'pressureUnit']
 //First item in the pair is the name of the Tasmota sensor in uppercase form. The second name is suffix commonly associated with this type of data. For examples, degrees (°) applies to both C and F. Currently these suffixes are only used for event log entries.
-@Field static final sensor2UnitSuffix = ['TEMPERATURE' : 'Degrees', 'HUMIDITY' : '% RH', 'DEWPOINT' : 'Degrees', 'ILLUMINANCE' : 'lux']
+@Field static final sensor2UnitSuffix = ['TEMPERATURE' : 'Degrees', 'HUMIDITY' : '% RH', 'DEWPOINT' : 'Degrees', 'ILLUMINANCE' : 'lux', 'PM2.5' : 'µg/M³']
 
 metadata {
 		definition (name: "Tasmota Sync - Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Sensor.groovy", singleThreaded: true )  {
@@ -75,6 +76,7 @@ metadata {
         attribute "humidity", "number"               //unit %rh               //Tasmota example: {"Time":"2022-05-17T03:33:05","SI7021":{"Temperature":69,"Humidity":28,"DewPoint":34},"TempUnit":"F"}
         attribute "illuminance", "number"            //unit lx                //Tasmota example: {"Time":"2019-11-03T20:45:37","BH1750":{"Illuminance":79}}  {"Time":"2019-11-03T21:04:05","TSL2561":{"Illuminance":21.180}}
         //attribute "rate", "number"                   //unit LPM || GPM
+        attribute "pm25", "number"                    //unit µg/M³            //Tasmota example: {"StatusSNS":{"Time":"2022-05-25T10:26:47","VINDRIKTNING":{"PM2.5":2}}}
         attribute "pressure", "number"               //unit hPa || mmHg        //Tasmota example: {"Time": "2019-11-03T19:34:28","BME280": {"Temperature": 21.7,"Humidity": 66.6,"Pressure": 988.6},"PressureUnit": "hPa","TempUnit": "C"}
         //attribute "soundPressureLevel", "number"     //unit dB
         attribute "temperature", "number"            //unit F || C            //Tasmota example: {"Time":"2022-05-17T03:33:05","SI7021":{"Temperature":69,"Humidity":28,"DewPoint":34},"TempUnit":"F"}
@@ -90,6 +92,7 @@ metadata {
         //attribute "distance", "number"
         attribute "gas", "number"               //Tasmota example: {"Time": "2021-09-22T17:00:00","BME680": {"Temperature": 24.5,"Humidity":33.0,"DewPoint": 7.1,"Pressure": 987.7,"Gas": 1086.43 },"PressureUnit": "hPa","TempUnit": "C"}
         attribute "pressureUnit", "string"      //Tasmota example: {"Time": "2019-11-03T19:34:28","BME280": {"Temperature": 21.7,"Humidity": 66.6,"Pressure": 988.6},"PressureUnit": "hPa","TempUnit": "C"}  -  Change with SetOption24 
+        attribute "switch1", "string"           //Tasmota example: Some "SENSOR" devices have a switch. The RCWL-0516 STATUS 8 output is: {"StatusSNS":{"Time":"2022-05-25T10:23:58","Switch1":"ON"}}  I'm sure others use the same or similar, possibly even a switch array.
         attribute "tempUnit", "string"          //Tasmota example: {"Time":"2022-05-17T03:33:05","SI7021":{"Temperature":69,"Humidity":28,"DewPoint":34},"TempUnit":"F"}  - Change with SetOption8. off is celsius and on is fahrenheit. Must do a refresh to update Hubitat.
         //attribute "TVOC", "number"              //Tasmota example: {"Time":"2020-01-01T00:00:00","IAQ":{"eCO2":450,"TVOC":125,"Resistance":76827}}  TVOC is Total Volatile Organic Compounds.     
 	}
@@ -97,7 +100,7 @@ metadata {
         section("Configure the Inputs"){
 			input name: "destIP", type: "text", title: bold(dodgerBlue("Tasmota Device IP Address")), description: italic("The IP address of the Tasmota device."), defaultValue: "192.168.0.X", required:true, displayDuringSetup: true
             input name: "HubIP", type: "text", title: bold(dodgerBlue("Hubitat Hub IP Address")), description: italic("The Hubitat Hub Address. Used by Tasmota rules to send HTTP responses."), defaultValue: "192.168.0.X", required:true, displayDuringSetup: true
-            input name: "sensorName", type: "text", title: bold(dodgerBlue("Tasmota Sensor Name")), description: italic("The name of the data sensor which can be obtained by typing 'STATUS 8' on the Tasmota console. The sensor name is shown preceding the names of the data fields such as temperature or humidity."), required:true
+            input name: "sensorName", type: "text", title: bold(dodgerBlue("Tasmota Sensor Name")), description: italic("The name of the data sensor which can be obtained by typing 'STATUS 8' on the Tasmota console. The sensor name is shown preceding the names of the data fields such as temperature or humidity."), required:false
             input name: "timeout", type: "number", title: bold("Timeout for Tasmota reponse."), description: italic("Time in ms after which a Transaction is closed by the watchdog and subsequent responses will be ignored. Default 5000ms."), defaultValue: "5000", required:true, displayDuringSetup: false
             input name: "debounce", type: "number", title: bold("Debounce Interval for Tasmota Sync."), description: italic("The period in ms from command invocation during which a Tasmota Sync request will be ignored. Default 7000ms."), defaultValue: "7000", required:true, displayDuringSetup: false
             input name: "logging_level", type: "number", title: bold("Level of detail displayed in log"), description: italic("Enter log level 0-3. (Default is 0.)"), defaultValue: "0", required:true, displayDuringSetup: false            
@@ -111,9 +114,15 @@ metadata {
         }
 }
 
-//Function used for quickly testing out logic and cleaning up.
+//Function used for quickly testing out SENSOR logic when I don't actually have the sensor.
 def test(){
-    //state.remove("starttime")
+    //To test out a sensor paste the result of STATUS 8
+    //body = '{"StatusSNS":{"Time":"2022-05-25T10:26:47","VINDRIKTNING":{"PM2.5":2}}}'
+    body = '{"StatusSNS":{"Time":"2022-05-25T10:23:58","Switch1":"ON","VINDRIKTNING":{"PM2.5":17}}}'
+    state.Action = "STATUS"
+    state.ActionValue = "8"
+    body = body.toUpperCase()
+    statusResponse(body)
 }
 
 //*********************************************************************************************************************************************
@@ -413,8 +422,15 @@ def statusResponse(body){
         {
         state.lastSensorData = new Date().format('yyyy-MM-dd HH:mm:ss')
         STATUSSNS = body?.STATUSSNS
-        //STATUSSNS looks like: [TIME:2022-05-17T04:26:39, TEMPUNIT:F, SI7021:[HUMIDITY:31, TEMPERATURE:64, DEWPOINT:33]]
+        //STATUSSNS looks like: [TIME:2022-05-17T04:26:39, TEMPUNIT:F, SI7021:[HUMIDITY:31, TEMPERATURE:64, DEWPOINT:33]] but may look like {"StatusSNS":{"Time":"2022-05-25T10:23:58","Switch1":"ON"}}
         log("statusResponse","STATUSSNS is: " + STATUSSNS, 1)
+        //Some "SENSOR" devices have a switch. The RCWL-0516 STATUS 8 output is: {"StatusSNS":{"Time":"2022-05-25T10:23:58","Switch1":"ON"}}
+        //The presence of this switch is not tied to the settings.sensorName.
+        switch1 = STATUSSNS?.SWITCH1
+        if (switch1 != null) {
+            sendEvent(name: "switch1" , value: switch1.toLowerCase())
+            log("statusResponse", "STATUSSNS switch1 is: ${switch1.toLowerCase()}" , 1)    
+            }
         
         //Test to see if the Tasmota STATUS 8 has returned a STATUSSNS section that matches the sensor name specified in settings.
         if ( STATUSSNS?."$sensorName" != null ) {
