@@ -66,7 +66,7 @@ metadata {
         command "tasmotaInjectRule"
         command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "A single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
         command "tasmotaTelePeriod", [ [name:"Seconds*", type: "STRING", description: "The number of seconds between Tasmota data updates (TelePeriod XX)."] ]
-        command "test"
+        //command "test"
         
         //Internally named variables that must be lower case. These will not be initialized until data is received for this type of sensor.
         //Attributtes do not display in the Attribute State when they are null.
