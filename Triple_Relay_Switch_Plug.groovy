@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Triple Relay\Switch\Plug Driver
-*  Version: v0.98.1
+*  Version: v1.0.1
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Triple Relay\Switch\Plug. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -10,7 +10,7 @@
 *  it under the terms of the GNU General Public License as published by
 *  the Free Software Foundation.
 *
-*  This driver is one of several in the Tasmota Sync series. (Bulb, Plug\Switch(PM Optional), Dual Switch, Dimmer Switch, Switch with Fan, Switch with Sensor (Temp & Humidity). All of these drivers are very similar and much of the code is identical.
+*  This driver is one of several in the Tasmota Sync series. All of these drivers are architecturally similar and much of the code is identical.
 *  To simplifiy maintenance all of these drivers have two sections. Search for the phrase "END OF UNIQUE FUNCTIONS" to find the split.
 *  #1 The top section contains code that is UNIQUE to a specific driver such as a bulb vs a switch vs a dimmer. Although this code is UNIQUE it is very similar between drivers.
 *  #2 The bottom section is code that is IDENTICAL and shared across all drivers and is about 700 - 800 lines of code. This section of code is referred to as CORE.
@@ -60,7 +60,7 @@ metadata {
             input name: "HubIP", type: "text", title: bold(dodgerBlue("Hubitat Hub IP Address")), description: italic("The Hubitat Hub Address. Used by Tasmota rules to send HTTP responses."), defaultValue: "192.168.0.X", required:true, displayDuringSetup: true
             input name: "timeout", type: "number", title: bold("Timeout for Tasmota reponse."), description: italic("Time in ms after which a Transaction is closed by the watchdog and subsequent responses will be ignored. Default 5000ms."), defaultValue: "5000", required:true, displayDuringSetup: false
             input name: "debounce", type: "number", title: bold("Debounce Interval for Tasmota Sync."), description: italic("The period in ms from command invocation during which a Tasmota Sync request will be ignored. Default 7000ms."), defaultValue: "7000", required:true, displayDuringSetup: false
-            input name: "switchBehaviour", type: "enum", title: bold("Switch Behaviour."), description: italic("Whether the primary Switch affects only outlet 1 or both outlet 1 and outlet 2.)"),
+            input name: "switchBehaviour", type: "enum", title: bold("Switch Behaviour."), description: italic("Whether the primary Switch affects only outlet 1 or ALL outlets 1 - 3.)"),
               options: [ [1:"Turns ON\\OFF only Power1"],[2:"Turns ON\\OFF Power1, Power2 & Power3"] ], defaultValue: 1
             input name: "logging_level", type: "number", title: bold("Level of detail displayed in log"), description: italic("Enter log level 0-3. (Default is 0.)"), defaultValue: "0", required:true, displayDuringSetup: false            
             input name: "loggingEnhancements", type: "enum", title: bold("Logging Enhancements."), description: italic("Allows log entries for this device to be enhanced with HTML tags for increased increased readability. (Default - All enhancements.)"),

@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Dual Relay\Switch\Plug Driver
-*  Version: v0.98.0
+*  Version: v1.0.0
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Dual Relay\Switch\Plug. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -15,10 +15,11 @@
 *  #1 The top section contains code that is UNIQUE to a specific driver such as a bulb vs a switch vs a dimmer. Although this code is UNIQUE it is very similar between drivers.
 *  #2 The bottom section is code that is IDENTICAL and shared across all drivers and is about 700 - 800 lines of code. This section of code is referred to as CORE.
 *
-*  DUAL SWITCH - UNIQUE - CHANGELOG
+*  DUAL RELAY\SWITCH\PLUG - UNIQUE - CHANGELOG
 *  Version 0.91 - Internal version
 *  Version 0.92.0 - Changed versioning to comply with Semantic Versioning standards (https://semver.org/). Moved CORE changelog to beginning of CORE section. Added links 
 *  Version 0.98.0 - All versions incremented and synchronised for HPM plublication
+*  Version 1.0.0 - All versions incremented and synchronised for HPM plublication via CSTEELE
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -34,7 +35,7 @@
 import groovy.json.JsonSlurper
 
 metadata {
-		definition (name: "Tasmota Sync - Dual Switch\\Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy", singleThreaded: true )  {
+		definition (name: "Tasmota Sync - Dual Relay\\Switch\\Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         capability "Switch"
         capability "Refresh"
 

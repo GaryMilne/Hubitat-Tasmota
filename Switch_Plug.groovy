@@ -2,7 +2,7 @@
 *  Tasmota Sync Switch\Plug Driver - Supports Power Monitoring
 *  Version: v0.98.0
 *  Download: See importUrl in definition
-*  Description: Hubitat Driver for Tasmota Bulb. Provides Realtime and native synchronization between Hubitat and Tasmota
+*  Description: Hubitat Driver for Tasmota Switch\Plug. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
 *  Copyright 2022 Gary J. Milne
 *

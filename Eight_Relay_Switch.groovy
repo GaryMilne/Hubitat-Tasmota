@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Eight Relay\Switch Driver
-*  Version: v0.98.1
+*  Version: v1.0.0
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Eight Relay\Switch. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -10,15 +10,16 @@
 *  it under the terms of the GNU General Public License as published by
 *  the Free Software Foundation.
 *
-*  This driver is one of several in the Tasmota Sync series. (Bulb, Plug\Switch(PM Optional), Dual Switch, Dimmer Switch, Switch with Fan, Switch with Sensor (Temp & Humidity). All of these drivers are very similar and much of the code is identical.
+*  This driver is one of several in the Tasmota Sync series. All of these drivers are architecturally similar and much of the code is identical.
 *  To simplifiy maintenance all of these drivers have two sections. Search for the phrase "END OF UNIQUE FUNCTIONS" to find the split.
 *  #1 The top section contains code that is UNIQUE to a specific driver such as a bulb vs a switch vs a dimmer. Although this code is UNIQUE it is very similar between drivers.
 *  #2 The bottom section is code that is IDENTICAL and shared across all drivers and is about 700 - 800 lines of code. This section of code is referred to as CORE.
 *
-*  DUAL SWITCH - UNIQUE - CHANGELOG
+*  EIGHT RELAY\SWITCH - UNIQUE - CHANGELOG
 *  Version 0.91 - Internal version
 *  Version 0.92.0 - Changed versioning to comply with Semantic Versioning standards (https://semver.org/). Moved CORE changelog to beginning of CORE section. Added links 
 *  Version 0.98.0 - All versions incremented and synchronised for HPM plublication
+*  Version 1.0.0 - All versions incremented and synchronised for HPM plublication via CSTEELE
 *  Version 1.0.0 - Created new version for 8 Port Relay switch\plug. Remove LastOn\LastOff per switch state variables because it was too messy in the UI.
 *
 * Authors Notes:
