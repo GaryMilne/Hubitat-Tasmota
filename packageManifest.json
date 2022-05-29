@@ -106,7 +106,7 @@
       "id": "11e4f944-b87b-4a1d-8904-116ee694a869",
       "name": "Tasmota Sync - Sensor",
       "namespace": "garyjmilne",
-      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Sensor.groovy",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/sensor.groovy",
       "description": "Tasmota Sync Sensor driver. Multiple sensor types and input types supported. Provides native and realtime synchronization with standard Tasmota 11 or greater.",
       "required": false,
       "version": "1.0.0",
