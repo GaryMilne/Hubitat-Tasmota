@@ -110,7 +110,7 @@ metadata {
 def test(){
     //state.remove("lastOff")
     //state.remove("lastOn")
-    //state.remove("plugType")
+    //state.remove("switchType")
     
     log("Initialize", "relayType: ${settings.relayType}.",0)
 }
@@ -198,7 +198,7 @@ def initialize(){
 def clean(){
     state.remove("lastOff")
     state.remove("lastOn")
-    state.remove("plugType")
+    state.remove("switchType")
 }
 
 //*********************************************************************************************************************************************************************
