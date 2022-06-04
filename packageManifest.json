@@ -1,7 +1,7 @@
 {
   "packageName": "Tasmota Sync Drivers",
   "author": "Gary J. Milne",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "minimumHEVersion": "2.2.9",
   "dateReleased": "2022-06-04",
   "releaseNotes": "Update to all N Port Relay_Switch_Plug Drivers to version 1.2.",
@@ -58,17 +58,19 @@
     },
     {
       "id": "70df6bd5-cc59-41fe-9ebd-e26a9313f0b1",
-      "name": "Tasmota Sync - Dual Relay_Switch_Plug",
+      "name": "Tasmota Sync - Dual Relay/Switch/Plug",
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy",
       "description": "Tasmota Sync driver for Dual Relay/Switch/Plug. No energy monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.2.0",
+      "version": "1.2.1",
       "categories": [
         "Integrations"
       ],
       "tags": [
-        "Lights & Switches"
+        "Lights & Switches",
+        "Misc. Devices",
+        "Energy Monitoring"
       ]
     },
     {
@@ -94,7 +96,7 @@
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy",
       "description": "Tasmota Sync driver for switch_plug. Provides optional energy monitoring and supports current, voltage and power (watts). Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.2.0",
+      "version": "1.2.1",
       "categories": [
         "Integrations"
       ],
@@ -125,12 +127,12 @@
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Eight_Relay_Switch_Plug.groovy",
       "required": false,
-      "version": "1.2.0",
+      "version": "1.2.1",
       "categories": [
         "Integrations"
       ],
       "tags": [
-        "Temperature & Humidity",
+        "Lights & Switches",
         "Misc. Devices"
       ]
     },
@@ -140,12 +142,12 @@
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Triple_Relay_Switch_Plug.groovy",
       "required": false,
-      "version": "1.2.0",
+      "version": "1.2.1",
       "categories": [
         "Integrations"
       ],
       "tags": [
-        "Temperature & Humidity",
+        "Lights & Switches",
         "Misc. Devices"
       ]
     },
