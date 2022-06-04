@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync N Port Relay\Switch\Plug Driver with PM
-*  Version: v1.1.0
+*  Version: v1.2.0
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota N Port Relay\Switch\Plug with Power Monitoring. Provides Realtime and native synchronization between Hubitat and Tasmota.
 *  The N port version handles any number of switches from 1 to 8. The SINGLE, DUAL, TRIPLE, QUAD and EIGHT port relay\switch\plug are all simply copies of this driver with the following adjustments.
@@ -47,13 +47,13 @@ import groovy.transform.Field
 import groovy.json.JsonSlurper
 
 //This determines the number of switches that will appear within the device. If the switchCount is greater than 2 then power monitoring option is no longer visible in settings.
-@Field static final Integer switchCount = 3
+@Field static final Integer switchCount = 1
 
 metadata {
         
-	//definition (name: "Tasmota Sync - Single Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy", singleThreaded: true )  {
+	definition (name: "Tasmota Sync - Single Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         //definition (name: "Tasmota Sync - Dual Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy", singleThreaded: true )  {
-        definition (name: "Tasmota Sync - Triple Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Triple_Relay_Switch_Plug.groovy", singleThreaded: true )  {
+        //definition (name: "Tasmota Sync - Triple Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Triple_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         //definition (name: "Tasmota Sync - Quad Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Quad_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         //definition (name: "Tasmota Sync - Eight Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Eight_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         capability "Switch"
@@ -1609,3 +1609,5 @@ def remainingTime(){
 //****** STANDARD: End of Supporting functions
 //******
 //*********************************************************************************************************************************************************************
+
+

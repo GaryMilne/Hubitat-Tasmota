@@ -47,14 +47,14 @@ import groovy.transform.Field
 import groovy.json.JsonSlurper
 
 //This determines the number of switches that will appear within the device. If the switchCount is greater than 2 then power monitoring option is no longer visible in settings.
-@Field static final Integer switchCount = 3
+@Field static final Integer switchCount = 4
 
 metadata {
         
 	//definition (name: "Tasmota Sync - Single Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         //definition (name: "Tasmota Sync - Dual Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy", singleThreaded: true )  {
-        definition (name: "Tasmota Sync - Triple Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Triple_Relay_Switch_Plug.groovy", singleThreaded: true )  {
-        //definition (name: "Tasmota Sync - Quad Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Quad_Relay_Switch_Plug.groovy", singleThreaded: true )  {
+        //definition (name: "Tasmota Sync - Triple Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Triple_Relay_Switch_Plug.groovy", singleThreaded: true )  {
+        definition (name: "Tasmota Sync - Quad Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Quad_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         //definition (name: "Tasmota Sync - Eight Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Eight_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         capability "Switch"
         capability "Refresh"
