@@ -1,18 +1,11 @@
 /**
 *  Tasmota Sync N Port Relay\Switch\Plug Driver with PM
-*  Version: v1.2.0
+*  Version: v1.2.1
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota N Port Relay\Switch\Plug with Power Monitoring. Provides Realtime and native synchronization between Hubitat and Tasmota.
-*  The N port version handles any number of switches from 1 to 8. The SINGLE, DUAL, TRIPLE, QUAD and EIGHT port relay\switch\plug are all simply copies of this driver with the following adjustments.
-*  1) switchCount - line 50
-*  2) definition - uncomment 1 line in the range 54 - 58
-*
-*  Names used for published drivers are:
-*  1 port - definition (name: "Tasmota Sync - Single Relay\\Switch\\Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy", singleThreaded: true ) {
-*  2 port - definition (name: "Tasmota Sync - Dual Relay\\Switch\\Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy", singleThreaded: true )  {
-*  3 port - definition (name: "Tasmota Sync - Triple Relay\\Switch\\Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Triple_Relay_Switch_Plug.groovy", singleThreaded: true )  {
-*  4 port - definition (name: "Tasmota Sync - Quad Relay\\Switch\\Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Quad_Relay_Switch_Plug.groovy", singleThreaded: true )  {
-*  8 port - definition (name: "Tasmota Sync - Eight Relay\\Switch", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Eight_Relay_Switch.groovy", singleThreaded: true )  {
+*  The N port version handles any number of switches from 1 to 8. The SINGLE, DUAL, TRIPLE, QUAD and EIGHT port relay/switch/plug are all simply copies of this driver with the following adjustment.
+*  1) switchCount - line 44
+*  Names used for published drivers are found in the definitions.
 *      
 *  Copyright 2022 Gary J. Milne  
 *
@@ -32,6 +25,7 @@
 *  Version 1.0.0 - Created new version for 8 Port Relay switch\plug. Remove LastOn\LastOff per switch state variables because it was too messy in the UI.
 *  Version 1.1.0 - Created new generic version for N ports\switches\plugs to reduce maintenance footprint.
 *  Version 1.2.0 - Added Power Monitoring logic. Only applies if switchCount is 2 or less. 
+*  Version 1.2.1 - Fixed bug for interchangeable handling of POWER\POWER1 responses. Added switchCount logic for handling the definitions.
 *
 *  Authors Notes:
 *  For more information on Tasmota Sync drivers check out these resources:
@@ -50,8 +44,7 @@ import groovy.json.JsonSlurper
 @Field static final Integer switchCount = 1
 
 metadata {
-        
-	definition (name: "Tasmota Sync - Single Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy", singleThreaded: true )  {
+	    definition (name: "Tasmota Sync - Single Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         //definition (name: "Tasmota Sync - Dual Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         //definition (name: "Tasmota Sync - Triple Relay/Switch/Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Triple_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         //definition (name: "Tasmota Sync - Quad Relay/Switch/Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Quad_Relay_Switch_Plug.groovy", singleThreaded: true )  {
@@ -199,7 +192,6 @@ def clean(){
     state.remove("lastOff")
     state.remove("lastOn")
     state.remove("switchType")
-    state.remove("plugType")
 }
 
 //*********************************************************************************************************************************************************************
@@ -418,8 +410,9 @@ def hubitatResponse(body){
         
         switch(Action.toUpperCase()) { 
             case ["POWER"]:
-        		log("hubitatResponse","Command: Power ${body.POWER}", 0)
                 //On a single relay\plug\switch the response to "POWER1 OFF" is {"POWER":"OFF"}.  On a multi-port relay the response to "POWER1 OFF" is {"POWER1":"OFF"} so we have to be ready to accept either response.
+                if (body?.POWER != null) log("hubitatResponse","Command: Power ${body.POWER}", 0)
+                if (body?.POWER1 != null) log("hubitatResponse","Command: Power ${body.POWER1}", 0)
                 if (ActionValue.equalsIgnoreCase(body.POWER) || ActionValue.equalsIgnoreCase(body.POWER1) ){
                     log ("hubitatResponse","Power state applied successfully", 0)
                     updateStatus("Complete:Success")
@@ -1610,5 +1603,3 @@ def remainingTime(){
 //****** STANDARD: End of Supporting functions
 //******
 //*********************************************************************************************************************************************************************
-
-
