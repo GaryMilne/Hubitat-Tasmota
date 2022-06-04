@@ -60,9 +60,9 @@
       "name": "Tasmota Sync - Dual Relay_Switch_Plug",
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy",
-      "description": "Tasmota Sync driver for Dual Relay-Switch-Plug. No energy monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
+      "description": "Tasmota Sync driver for Dual Relay/Switch/Plug. No energy monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.0.0",
+      "version": "1.2.0",
       "categories": [
         "Integrations"
       ],
@@ -88,12 +88,12 @@
     },
     {
       "id": "4818eca9-8ebe-46dc-86ee-0131b04407af",
-      "name": "Tasmota Sync - Switch_Plug",
+      "name": "Tasmota Sync - Single Relay/Switch/Plug",
       "namespace": "garyjmilne",
-      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Switch_Plug.groovy",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy",
       "description": "Tasmota Sync driver for switch_plug. Provides optional energy monitoring and supports current, voltage and power (watts). Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.0.0",
+      "version": "1.2.0",
       "categories": [
         "Integrations"
       ],
@@ -106,7 +106,7 @@
       "id": "11e4f944-b87b-4a1d-8904-116ee694a869",
       "name": "Tasmota Sync - Sensor",
       "namespace": "garyjmilne",
-      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/sensor.groovy",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Sensor.groovy",
       "description": "Tasmota Sync Sensor driver. Multiple sensor types and input types supported. Provides native and realtime synchronization with standard Tasmota 11 or greater.",
       "required": false,
       "version": "1.0.0",
@@ -120,11 +120,11 @@
     },
     {
       "id": "b5cef666-2681-45c6-a467-d889a036bc22",
-      "name": "Tasmota Sync - Eight Relay\\\\Switch",
+      "name": "Tasmota Sync - Eight Relay/Switch/Plug",
       "namespace": "garyjmilne",
-      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Eight_Relay_Switch.groovy",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Eight_Relay_Switch_Plug.groovy",
       "required": false,
-      "version": "1.0.0",
+      "version": "1.2.0",
       "categories": [
         "Integrations"
       ],
@@ -135,11 +135,26 @@
     },
     {
       "id": "a56a3983-dfca-4826-a146-45680190f22d",
-      "name": "Tasmota Sync - Triple Relay\\\\Switch\\\\Plug",
+      "name": "Tasmota Sync - Triple Relay/Switch/Plug",
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Triple_Relay_Switch_Plug.groovy",
       "required": false,
-      "version": "1.0.1",
+      "version": "1.2.0",
+      "categories": [
+        "Integrations"
+      ],
+      "tags": [
+        "Temperature & Humidity",
+        "Misc. Devices"
+      ]
+    },
+    {
+      "id": "e16c85b3-3f3e-43b4-8208-70d4fd5f3057",
+      "name": "Tasmota Sync - Quad Relay/Switch/Plug",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Quad_Relay_Switch_Plug.groovy",
+      "required": false,
+      "version": "1.2.0",
       "categories": [
         "Integrations"
       ],
