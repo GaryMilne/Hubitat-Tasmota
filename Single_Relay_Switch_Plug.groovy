@@ -1,10 +1,11 @@
 /**
 *  Tasmota Sync N Port Relay\Switch\Plug Driver with PM
-*  Version: v1.2.1
+*  Version: v1.2.2
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota N Port Relay\Switch\Plug with Power Monitoring. Provides Realtime and native synchronization between Hubitat and Tasmota.
 *  The N port version handles any number of switches from 1 to 8. The SINGLE, DUAL, TRIPLE, QUAD and EIGHT port relay/switch/plug are all simply copies of this driver with the following adjustment.
-*  1) switchCount - line 44
+*  1) switchCount - line 46
+*  2) definition - lines 49\53 - Uncomment the appropriate definition.
 *  Names used for published drivers are found in the definitions.
 *      
 *  Copyright 2022 Gary J. Milne  
@@ -25,7 +26,8 @@
 *  Version 1.0.0 - Created new version for 8 Port Relay switch\plug. Remove LastOn\LastOff per switch state variables because it was too messy in the UI.
 *  Version 1.1.0 - Created new generic version for N ports\switches\plugs to reduce maintenance footprint.
 *  Version 1.2.0 - Added Power Monitoring logic. Only applies if switchCount is 2 or less. 
-*  Version 1.2.1 - Fixed bug for interchangeable handling of POWER\POWER1 responses. Added switchCount logic for handling the definitions.
+*  Version 1.2.1 - Fixed bug for interchangeable handling of POWER\POWER1 responses.
+*  Version 1.2.2 - Fixed bug for POWER values received by TasmotaSync not being recorded properly
 *
 *  Authors Notes:
 *  For more information on Tasmota Sync drivers check out these resources:
@@ -33,7 +35,7 @@
 *  How to upgrade from Tasmota 8.X to Tasmota 11.X  https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/How%20to%20Upgrade%20from%20Tasmota%20from%208.X%20to%2011.X.pdf
 *  Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 *
-*  Gary Milne - May, 2022
+*  Gary Milne - June 5th, 2022
 *
 **/
 
@@ -101,11 +103,7 @@ metadata {
 
 //Function used for quickly testing out logic and cleaning up.
 def test(){
-    //state.remove("lastOff")
-    //state.remove("lastOn")
-    //state.remove("switchType")
     
-    log("Initialize", "relayType: ${settings.relayType}.",0)
 }
 
 
@@ -192,6 +190,7 @@ def clean(){
     state.remove("lastOff")
     state.remove("lastOn")
     state.remove("switchType")
+    state.remove("plugType")
 }
 
 //*********************************************************************************************************************************************************************
@@ -626,7 +625,7 @@ def syncTasmota(body){
         //A value of '' for any of these means no update. Probably because the device has restarted and the %vars% have not repopulated. This is expected.
         if (body?.CURRENT != '') { current = body?.CURRENT ; log ("syncTasmota","Current is: ${current}", 2) }
         if (body?.VOLTAGE != '') { voltage = body?.VOLTAGE ; log ("syncTasmota","Voltage is: ${voltage}", 2) }
-        if (body?.WATTS != '') { power = body?.WATTS ; log ("syncTasmota","Power is: ${power}", 2) }
+        if (body?.POWER != '') { power = body?.POWER ; log ("syncTasmota","Power is: ${power}", 2) }
         
         //A value of '' for any of these means no update. Probably because the device has restarted and the %vars% have not repopulated. This is expected.
         if (body?.SWITCH1 != '') { switch1 = body?.SWITCH1 ; log ("syncTasmota","Switch 1 is: ${switch1}", 2) }
@@ -664,7 +663,7 @@ def syncTasmota(body){
         //Send current and voltage events if configured. Ignore anything less than 0.
         if (settings?.relayType.toInteger() >= 2 ){
             if ( current?.toFloat() >= 0 ) sendEvent(name: "current", value: current, unit: "Amps" )
-            if ( voltage?.toInteger() >= 0 ) sendEvent(name: "voltage", value: voltage, unit: "Volts" )
+            if ( voltage?.toFloat() >= 0 ) sendEvent(name: "voltage", value: voltage, unit: "Volts" )
             }
         
         updateStatus ("Complete:Tasmota Sync")
