@@ -1,10 +1,10 @@
 {
   "packageName": "Tasmota Sync Drivers",
   "author": "Gary J. Milne",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "minimumHEVersion": "2.2.9",
   "dateReleased": "2022-06-04",
-  "releaseNotes": "Update to all N Port Relay_Switch_Plug Drivers to version 1.2.",
+  "releaseNotes": "Update to all N Port Relay_Switch_Plug Drivers to version 1.2.2",
   "communityLink": "https://community.hubitat.com/t/tasmota-sync-drivers-native-and-real-time-synchronization-between-hubitat-and-tasmota-11/93651",
   "documentationLink": "https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf",
   "drivers": [
@@ -63,7 +63,7 @@
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy",
       "description": "Tasmota Sync driver for Dual Relay/Switch/Plug. No energy monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.2.1",
+      "version": "1.2.2",
       "categories": [
         "Integrations"
       ],
@@ -96,7 +96,7 @@
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy",
       "description": "Tasmota Sync driver for switch_plug. Provides optional energy monitoring and supports current, voltage and power (watts). Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.2.1",
+      "version": "1.2.2",
       "categories": [
         "Integrations"
       ],
@@ -127,7 +127,7 @@
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Eight_Relay_Switch_Plug.groovy",
       "required": false,
-      "version": "1.2.1",
+      "version": "1.2.2",
       "categories": [
         "Integrations"
       ],
@@ -142,7 +142,7 @@
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Triple_Relay_Switch_Plug.groovy",
       "required": false,
-      "version": "1.2.1",
+      "version": "1.2.2",
       "categories": [
         "Integrations"
       ],
@@ -157,7 +157,7 @@
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Quad_Relay_Switch_Plug.groovy",
       "required": false,
-      "version": "1.2.0",
+      "version": "1.2.2",
       "categories": [
         "Integrations"
       ],
