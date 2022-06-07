@@ -740,7 +740,7 @@ def syncTasmota(body){
 
 def statusResponse(body){
     log ("statusResponse", "Entering, data Received.", 1)
-    log ("statusResponse", "Raw data is: ${body}.", 0)
+    log ("statusResponse", "Raw data is: ${body}.", 1)
     
     //Now parse into JSON to extract data.
     body = parseJson(body)
