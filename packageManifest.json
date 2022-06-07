@@ -1,10 +1,10 @@
 {
   "packageName": "Tasmota Sync Drivers",
   "author": "Gary J. Milne",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "minimumHEVersion": "2.2.9",
   "dateReleased": "2022-06-04",
-  "releaseNotes": "Update to all N Port Relay_Switch_Plug Drivers to version 1.2.2",
+  "releaseNotes": "Update to all N Port Relay_Switch_Plug Drivers to version 1.2.3. Restores Toggle() and implements option for ALL Tasmota Energy statistics.",
   "communityLink": "https://community.hubitat.com/t/tasmota-sync-drivers-native-and-real-time-synchronization-between-hubitat-and-tasmota-11/93651",
   "documentationLink": "https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf",
   "drivers": [
@@ -61,9 +61,9 @@
       "name": "Tasmota Sync - Dual Relay/Switch/Plug",
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy",
-      "description": "Tasmota Sync driver for Dual Relay/Switch/Plug. No energy monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
+      "description": "Tasmota Sync driver for Dual Relay/Switch/Plug with optional Energy Monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.2.2",
+      "version": "1.2.3",
       "categories": [
         "Integrations"
       ],
@@ -94,9 +94,9 @@
       "name": "Tasmota Sync - Single Relay/Switch/Plug",
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy",
-      "description": "Tasmota Sync driver for switch_plug. Provides optional energy monitoring and supports current, voltage and power (watts). Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
+      "description": "Tasmota Sync driver for Dual Relay/Switch/Plug with optional Energy Monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.2.2",
+      "version": "1.2.3",
       "categories": [
         "Integrations"
       ],
@@ -126,8 +126,9 @@
       "name": "Tasmota Sync - Eight Relay/Switch/Plug",
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Eight_Relay_Switch_Plug.groovy",
+      "description": "Tasmota Sync driver for Eight Relay/Switch/Plug, no Energy Monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.2.2",
+      "version": "1.2.3",
       "categories": [
         "Integrations"
       ],
@@ -141,8 +142,9 @@
       "name": "Tasmota Sync - Triple Relay/Switch/Plug",
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Triple_Relay_Switch_Plug.groovy",
+      "description": "Tasmota Sync driver for Triple Relay/Switch/Plug, no Energy Monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.2.2",
+      "version": "1.2.3",
       "categories": [
         "Integrations"
       ],
@@ -156,8 +158,9 @@
       "name": "Tasmota Sync - Quad Relay/Switch/Plug",
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Quad_Relay_Switch_Plug.groovy",
+      "description": "Tasmota Sync driver for Quad Relay/Switch/Plug, no Energy Monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.2.2",
+      "version": "1.2.3",
       "categories": [
         "Integrations"
       ],
