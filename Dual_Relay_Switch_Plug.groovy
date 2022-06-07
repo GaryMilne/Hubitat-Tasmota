@@ -1,11 +1,11 @@
 /**
 *  Tasmota Sync N Port Relay\Switch\Plug Driver with PM
-*  Version: v1.2.2
+*  Version: v1.2.3
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota N Port Relay\Switch\Plug with Power Monitoring. Provides Realtime and native synchronization between Hubitat and Tasmota.
 *  The N port version handles any number of switches from 1 to 8. The SINGLE, DUAL, TRIPLE, QUAD and EIGHT port relay/switch/plug are all simply copies of this driver with the following adjustment.
-*  1) switchCount - line 46
-*  2) definition - lines 49\53 - Uncomment the appropriate definition.
+*  1) edit line @Field static final Integer switchCount = ?  to reflect correct switchcount
+*  2) definition - Uncomment the appropriate definition.
 *  Names used for published drivers are found in the definitions.
 *      
 *  Copyright 2022 Gary J. Milne  
@@ -28,6 +28,8 @@
 *  Version 1.2.0 - Added Power Monitoring logic. Only applies if switchCount is 2 or less. 
 *  Version 1.2.1 - Fixed bug for interchangeable handling of POWER\POWER1 responses.
 *  Version 1.2.2 - Fixed bug for POWER values received by TasmotaSync not being recorded properly
+*  Version 1.2.2 - Fixed bug for POWER values received by TasmotaSync not being recorded properly
+*  Version 1.2.3 - Restored missing Toggle command option. Added option to display\track all Tasmota Energy events
 *
 *  Authors Notes:
 *  For more information on Tasmota Sync drivers check out these resources:
@@ -43,7 +45,8 @@ import groovy.transform.Field
 import groovy.json.JsonSlurper
 
 //This determines the number of switches that will appear within the device. If the switchCount is greater than 2 then power monitoring option is no longer visible in settings.
-@Field static final Integer switchCount = 12
+@Field static final Integer switchCount = 2
+
 metadata {
 	    //definition (name: "Tasmota Sync - Single Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         definition (name: "Tasmota Sync - Dual Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy", singleThreaded: true )  {
@@ -58,7 +61,8 @@ metadata {
         
         //Allow Power Monitoring for Plugs with 2 or less switches
         if (switchCount <= 2) { capability "PowerMeter" ; capability "CurrentMeter" ; capability "EnergyMeter" ; capability "VoltageMeasurement"                                   
-            attribute "current", "number" ; attribute "power", "number" ; attribute "voltage", "number"
+            attribute "current", "number" ; attribute "power", "number" ; attribute "voltage", "number" ; attribute "apparentPower", "number" ; attribute "energyToday", "number" ;
+            attribute "energyTotal", "number" ; attribute "energyYesterday", "number" ; attribute "powerFactor", "number" ; "number" ; attribute "reactivePower", "number"
             }
             
         //log.debug ("SwitchCount is: ${switchCount}")
@@ -75,6 +79,7 @@ metadata {
         command "tasmotaInjectRule"
         command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "An optional single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
         command "tasmotaTelePeriod", [ [name:"Seconds*", type: "STRING", description: "The number of seconds between Tasmota sensor updates (TelePeriod XX)."] ]
+        command "toggle"
         //command "test"
 	}
     
@@ -83,7 +88,7 @@ metadata {
             input name: "HubIP", type: "text", title: bold(dodgerBlue("Hubitat Hub IP Address")), description: italic("The Hubitat Hub Address. Used by Tasmota rules to send HTTP responses."), defaultValue: "192.168.0.X", required:true, displayDuringSetup: true
             if (switchCount <= 2) {    
                 input name: "relayType", type: "enum", title: bold(dodgerBlue("Type: Simple Plug, Plug with Power (Watts), Plug with Power, Voltage and Current.")),description: italic("A Tasmota device that reports data can generate a lot of events, especially if the Tasmota TelePeriod is a low value. This setting will reduce the amount of data being recorded by ignoring non-essential changes. ") + underline("Note: A change in plug type requires re-installation of RULE3 for proper function."),
-                    options: [[0:"Simple Plug. Log ONLY switch events. (Default)"], [1:"Plug with Power Monitoring. Log ONLY Switch and Power events."],[2:"Plug with Power Monitoring. Log ALL Switch, Power, Current and Voltage events"]], defaultValue: 0, required:true
+                    options: [[0:"Simple Plug. Log ONLY switch events. (Default)"], [1:"Plug with Power Monitoring. Log ONLY Switch and Power events."],[2:"Plug with Power Monitoring. Log ALL Switch, Power, Current and Voltage events"],[3:"Plug with Power Monitoring. Log ALL Tasmota Energy events"]], defaultValue: 0, required:true
             }
             input name: "timeout", type: "number", title: bold("Timeout for Tasmota reponse."), description: italic("Time in ms after which a Transaction is closed by the watchdog and subsequent responses will be ignored. Default 5000ms."), defaultValue: "5000", required:true, displayDuringSetup: false
             input name: "debounce", type: "number", title: bold("Debounce Interval for Tasmota Sync."), description: italic("The period in ms from command invocation during which a Tasmota Sync request will be ignored. Default 7000ms."), defaultValue: "7000", required:true, displayDuringSetup: false
@@ -152,12 +157,15 @@ def initialize(){
     if (settings.relayType.toInteger() == 0 ) {
         state.relayType = "Simple switch"
         log("Initialize", "Configured as simple switch. No power monitoring information.", 0)
-        //if ( device.currentValue("current") != null ) sendEvent(name: "current", value: "--", descriptionText: "Current events have been disabled", unit: "Amps", isStateChange: true )
-        //if ( device.currentValue("voltage") != null ) sendEvent(name: "voltage", value: "--", descriptionText: "Voltage events have been disabled", unit: "Volts", isStateChange: true )
-        //if ( device.currentValue("power") != null ) sendEvent(name: "power", value: "--", descriptionText: "Power events have been disabled", unit: "Watts", isStateChange: true )
         device.deleteCurrentState("current")
         device.deleteCurrentState("voltage")
         device.deleteCurrentState("power")
+        device.deleteCurrentState("apparentPower")
+        device.deleteCurrentState("energyToday")
+        device.deleteCurrentState("energyTotal")
+        device.deleteCurrentState("energyYesterday")
+        device.deleteCurrentState("powerFactor")
+        device.deleteCurrentState("reactivePower")
     }
     
     //Plug with PM. Only log switch and power events
@@ -165,19 +173,44 @@ def initialize(){
         state.relayType = "Lite Power Monitoring (Watts only)."
         log("Initialize", "Configured as switch with lite power monitoring. ONLY logging switch and power events.", 0)
         if ( device.currentValue("power") == null ) sendEvent(name: "power", value: 0, descriptionText: "Power (watts) events have been enabled", unit: "Watts", isStateChange: true )
-        //if ( device.currentValue("current") != null ) sendEvent(name: "current", value: "--", descriptionText: "Current events have been disabled", unit: "Amps", isStateChange: true )
-        //if ( device.currentValue("voltage") != null ) sendEvent(name: "voltage", value: "--", descriptionText: "Voltage events have been disabled", unit: "Volts", isStateChange: true )
         device.deleteCurrentState("current")
         device.deleteCurrentState("voltage")
+        device.deleteCurrentState("apparentPower")
+        device.deleteCurrentState("energyToday")
+        device.deleteCurrentState("energyTotal")
+        device.deleteCurrentState("energyYesterday")
+        device.deleteCurrentState("powerFactor")
+        device.deleteCurrentState("reactivePower")
     }
     
     //Plug with PM. Log switch, current and voltage events
     if (settings.relayType.toInteger() == 2 ) {
-        state.relayType = "Full Power Monitoring (Current, Voltage and Watts)."
+        state.relayType = "Normal Power Monitoring (Current, Voltage and Watts)."
         log("Initialize", "Configured as switch with power monitoring. Logging ALL switch, power, voltage and amps events.", 0)
         if ( device.currentValue("current") == null ) sendEvent(name: "current", value: 0, descriptionText: "Current events have been enabled", unit: "Amps", isStateChange: true )
-        if ( device.currentValue("voltage") == null )sendEvent(name: "voltage", value: 0, descriptionText: "Voltage events have been enabled", unit: "Volts", isStateChange: true )
-        if ( device.currentValue("power") == null )sendEvent(name: "power", value: 0, descriptionText: "Power (watts) events have been enabled", unit: "Watts", isStateChange: true )
+        if ( device.currentValue("voltage") == null ) sendEvent(name: "voltage", value: 0, descriptionText: "Voltage events have been enabled", unit: "Volts", isStateChange: true )
+        if ( device.currentValue("power") == null ) sendEvent(name: "power", value: 0, descriptionText: "Power (watts) events have been enabled", unit: "Watts", isStateChange: true )
+        device.deleteCurrentState("apparentPower")
+        device.deleteCurrentState("energyToday")
+        device.deleteCurrentState("energyTotal")
+        device.deleteCurrentState("energyYesterday")
+        device.deleteCurrentState("powerFactor")
+        device.deleteCurrentState("reactivePower")
+    }
+    
+    //Plug with PM. All Tasmota Energy Events
+    if (settings.relayType.toInteger() == 3 ) {
+        state.relayType = "Full Power Monitoring (All Tasmota Energy Events)."
+        log("Initialize", "Configured as switch with power monitoring. Logging ALL switch, power, voltage and amps events.", 0)
+        if ( device.currentValue("current") == null ) sendEvent(name: "current", value: 0, descriptionText: "Current events have been enabled", unit: "Amps", isStateChange: true )
+        if ( device.currentValue("voltage") == null ) sendEvent(name: "voltage", value: 0, descriptionText: "Voltage events have been enabled", unit: "Volts", isStateChange: true )
+        if ( device.currentValue("power") == null ) sendEvent(name: "power", value: 0, descriptionText: "Power (watts) events have been enabled", unit: "Watts", isStateChange: true )
+        if ( device.currentValue("apparentPower") == null ) sendEvent(name: "apparentPower", value: 0, descriptionText: "Apparent Power events have been enabled", unit: "VA", isStateChange: true )
+        if ( device.currentValue("energyToday") == null ) sendEvent(name: "energyToday", value: 0, descriptionText: "Energy Today events have been enabled", unit: "kWh", isStateChange: true )
+        if ( device.currentValue("energyTotal") == null ) sendEvent(name: "energyTotal", value: 0, descriptionText: "Energy Total events have been enabled", unit: "kWh", isStateChange: true )
+        if ( device.currentValue("energyYesterday") == null ) sendEvent(name: "energyYesterday", value: 0, descriptionText: "Energy Yesterday events have been enabled", unit: "kWh", isStateChange: true )
+        if ( device.currentValue("powerFactor") == null ) sendEvent(name: "powerFactor", value: 0, descriptionText: "Power Factor events have been enabled", isStateChange: true )
+        if ( device.currentValue("reactivePower") == null ) sendEvent(name: "reactivePower", value: 0, descriptionText: "Reactive events have been enabled", unit: "VAr", isStateChange: true )
     }
      
     //Do a refresh to sync the device driver
@@ -190,6 +223,7 @@ def clean(){
     state.remove("lastOn")
     state.remove("switchType")
     state.remove("plugType")
+    device.deleteCurrentState("powerWithUnit")
 }
 
 //*********************************************************************************************************************************************************************
@@ -619,12 +653,19 @@ def syncTasmota(body){
         body = parseJson(body)
         
         //Preset the values for when the %vars% are empty
-        switch1 = -1 ; switch2 = -1 ; switch3 = -1 ; switch4 = -1 ; switch5 = -1 ; switch6 = -1 ; switch7 = -1 ; switch8 = -1 ; current = -1 ; voltage = -1 ; power = -1
+        switch1 = -1 ; switch2 = -1 ; switch3 = -1 ; switch4 = -1 ; switch5 = -1 ; switch6 = -1 ; switch7 = -1 ; switch8 = -1 
+        current = -1 ; voltage = -1 ; power = -1 ; apparentPower = -1 ; energyToday = -1 ; energyTotal = -1 ; energyYesterday = -1 ; powerFactor = -1 ;  reactivePower = -1
         
         //A value of '' for any of these means no update. Probably because the device has restarted and the %vars% have not repopulated. This is expected.
         if (body?.CURRENT != '') { current = body?.CURRENT ; log ("syncTasmota","Current is: ${current}", 2) }
         if (body?.VOLTAGE != '') { voltage = body?.VOLTAGE ; log ("syncTasmota","Voltage is: ${voltage}", 2) }
         if (body?.POWER != '') { power = body?.POWER ; log ("syncTasmota","Power is: ${power}", 2) }
+        if (body?.APPARENTPOWER != '') { apparentPower = body?.APPARENTPOWER ; log ("syncTasmota","apparentPower is: ${apparentPower}", 2) }
+        if (body?.TODAY != '') { energyToday = body?.TODAY ; log ("syncTasmota","energyToday is: ${energyToday}", 2) }
+        if (body?.TOTAL != '') { energyTotal = body?.TOTAL ; log ("syncTasmota","energyTotal is: ${energyTotal}", 2) }
+        if (body?.YESTERDAY != '') { energyYesterday = body?.YESTERDAY ; log ("syncTasmota","energyYesterday is: ${energyYesterday}", 2) }
+        if (body?.FACTOR != '') { powerFactor = body?.FACTOR ; log ("syncTasmota","powerFactor is: ${powerFactor}", 2) }
+        if (body?.REACTIVEPOWER != '') { reactivePower = body?.REACTIVEPOWER ; log ("syncTasmota","reactivePower is: ${reactivePower}", 2) }
         
         //A value of '' for any of these means no update. Probably because the device has restarted and the %vars% have not repopulated. This is expected.
         if (body?.SWITCH1 != '') { switch1 = body?.SWITCH1 ; log ("syncTasmota","Switch 1 is: ${switch1}", 2) }
@@ -665,6 +706,16 @@ def syncTasmota(body){
             if ( voltage?.toFloat() >= 0 ) sendEvent(name: "voltage", value: voltage, unit: "Volts" )
             }
         
+        //Send remaining Tasmota Energy events if configured. Ignore anything less than 0.
+        if (settings?.relayType.toInteger() >= 3 ){
+            if ( apparentPower?.toFloat() >= 0 ) sendEvent(name: "apparentPower", value: apparentPower, unit: "VA" )
+            if ( energyToday?.toFloat() >= 0 ) sendEvent(name: "energyToday", value: energyToday, unit: "kWh" )
+            if ( energyTotal?.toFloat() >= 0 ) sendEvent(name: "energyTotal", value: energyTotal, unit: "kWh" )
+            if ( energyYesterday?.toFloat() >= 0 ) sendEvent(name: "energyYesterday", value: energyYesterday, unit: "kWh" )
+            if ( powerFactor?.toFloat() >= 0 ) sendEvent(name: "powerFactor", value: powerFactor )
+            if ( reactivePower?.toFloat() >= 0 ) sendEvent(name: "reactivePower", value: reactivePower, unit: "VAr" )    
+            }
+        
         updateStatus ("Complete:Tasmota Sync")
         log ("syncTasmota", "Sync completed. Exiting", 0)
         return
@@ -689,7 +740,7 @@ def syncTasmota(body){
 
 def statusResponse(body){
     log ("statusResponse", "Entering, data Received.", 1)
-    log ("statusResponse", "Raw data is: ${body}.", 2)
+    log ("statusResponse", "Raw data is: ${body}.", 0)
     
     //Now parse into JSON to extract data.
     body = parseJson(body)
@@ -707,10 +758,20 @@ def statusResponse(body){
                 }
         }
             
-        //Do not send Current and Voltage events if reduced reporting has been selected    
-        if (settings.relayType.toInteger() == 2){
+        //Update Current and Voltage
+        if (settings.relayType.toInteger() >= 2){
             if (body?.STATUSSNS?.ENERGY?.CURRENT != null ) {  log("updateData", "Current is: ${body.STATUSSNS.ENERGY.CURRENT}" , 2)  ;  sendEvent(name: "current", value: body.STATUSSNS.ENERGY.CURRENT ) }
             if (body?.STATUSSNS?.ENERGY?.VOLTAGE != null ) {  log("updateData", "Voltage is: ${body.STATUSSNS.ENERGY.VOLTAGE}" , 2)  ;  sendEvent(name: "voltage", value: body.STATUSSNS.ENERGY.VOLTAGE ) }  
+        }
+            
+        //Update remaining Tasmota Energy attributes
+        if (settings.relayType.toInteger() >= 3){
+            if (body?.STATUSSNS?.ENERGY?.APPARENTPOWER != null ) {  log("updateData", "Apparent Power is: ${body.STATUSSNS.ENERGY.APPARENTPOWER}" , 2)  ;  sendEvent(name: "apparentPower", value: body.STATUSSNS.ENERGY.APPARENTPOWER ) }
+            if (body?.STATUSSNS?.ENERGY?.TODAY != null ) {  log("updateData", "Energy Today is: ${body.STATUSSNS.ENERGY.TODAY}" , 2)  ;  sendEvent(name: "energyToday", value: body.STATUSSNS.ENERGY.TODAY ) }
+            if (body?.STATUSSNS?.ENERGY?.TOTAL != null ) {  log("updateData", "Energy Total is: ${body.STATUSSNS.ENERGY.TOTAL}" , 2)  ;  sendEvent(name: "energyTotal", value: body.STATUSSNS.ENERGY.TOTAL ) }
+            if (body?.STATUSSNS?.ENERGY?.YESTERDAY != null ) {  log("updateData", "Energy Yesterday is: ${body.STATUSSNS.ENERGY.YESTERDAY}" , 2)  ;  sendEvent(name: "energyYesterday", value: body.STATUSSNS.ENERGY.YESTERDAY ) }
+            if (body?.STATUSSNS?.ENERGY?.FACTOR != null ) {  log("updateData", "Power Factor is: ${body.STATUSSNS.ENERGY.POWERFACOR}" , 2)  ;  sendEvent(name: "powerFactor", value: body.STATUSSNS.ENERGY.FACTOR ) }
+            if (body?.STATUSSNS?.ENERGY?.REACTIVEPOWER != null ) {  log("updateData", "Reactive Power is: ${body.STATUSSNS.ENERGY.REACTIVEPOWER}" , 2)  ;  sendEvent(name: "reactivePower", value: body.STATUSSNS.ENERGY.REACTIVEPOWER ) }
         }
                 
         log("statusResponse","STATUS 8 - ENERGY values processed.", 0)
@@ -760,6 +821,7 @@ def tasmotaInjectRule(){
     if ( settings.relayType.toInteger() == 0 ) triggers = "[]"
     if ( settings.relayType.toInteger() == 1 ) triggers = "[Tele-ENERGY#POWER]"
     if ( settings.relayType.toInteger() == 2 ) triggers = "[Tele-ENERGY#POWER,Tele-ENERGY#VOLTAGE,Tele-ENERGY#CURRENT]"
+    if ( settings.relayType.toInteger() == 3 ) triggers = "[Tele-ENERGY#POWER,Tele-ENERGY#VOLTAGE,Tele-ENERGY#CURRENT,Tele-ENERGY#APPARENTPOWER,Tele-ENERGY#TODAY,Tele-ENERGY#TOTAL,Tele-ENERGY#YESTERDAY,Tele-ENERGY#FACTOR,Tele-ENERGY#REACTIVEPOWER]"
         
     temp = triggers.replace("[","") 
     temp = temp.replace("]","") 
