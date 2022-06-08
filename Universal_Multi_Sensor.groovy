@@ -1,5 +1,5 @@
 /**
-*  Tasmota Sync Universal Sensor Driver
+*  Tasmota Sync Universal Multi Sensor Driver
 *  Version: v0.98.3
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Sensors. Provides Realtime and native synchronization between Hubitat and Tasmota
@@ -15,7 +15,7 @@
 *  #1 The top section contains code that is UNIQUE to a specific driver such as a bulb vs a switch vs a dimmer. Although this code is UNIQUE it is very similar between drivers.
 *  #2 The bottom section is code that is IDENTICAL and shared across all drivers and is about 700 - 800 lines of code. This section of code is referred to as CORE.
 *
-*  UNIVERSAL SENSOR - UNIQUE - CHANGELOG
+*  UNIVERSAL MULTI SENSOR - UNIQUE - CHANGELOG
 *  Version 0.91 - Internal version
 *  Version 0.92 - Added fixed logic for extracting for sensor SI7102
 *  Version 0.93 - Virtualized the name of the sensor and added it to settings.
@@ -107,7 +107,7 @@ sensorType = "All"
 @Field static final mirroredAttributes = ['POWER' : 'energy', 'CURRENT' : 'amperage', 'ECO' : 'carbonMonoxide' , 'ECO2' : 'carbonDioxide' , 'FLOW' : 'rate']
 
 metadata {
-		definition (name: "Tasmota Sync - Universal Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Sensor.groovy", singleThreaded: true )  {
+		definition (name: "Tasmota Sync - Universal Multi Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor.groovy", singleThreaded: true )  {
         //capability "LiquidFlowRate"
         //capability "PressureMeasurement"
         capability "Refresh"
