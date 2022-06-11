@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Universal Multi Sensor Driver
-*  Version: v0.98.3
+*  Version: v0.98.4
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Sensors. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -15,7 +15,7 @@
 *  #1 The top section contains code that is UNIQUE to a specific driver such as a bulb vs a switch vs a dimmer. Although this code is UNIQUE it is very similar between drivers.
 *  #2 The bottom section is code that is IDENTICAL and shared across all drivers and is about 700 - 800 lines of code. This section of code is referred to as CORE.
 *
-*  UNIVERSAL MULTI SENSOR - UNIQUE - CHANGELOG
+*  UNIVERSAL SENSOR - UNIQUE - CHANGELOG
 *  Version 0.91 - Internal version
 *  Version 0.92 - Added fixed logic for extracting for sensor SI7102
 *  Version 0.93 - Virtualized the name of the sensor and added it to settings.
@@ -27,6 +27,7 @@
 *  Version 0.98.1 - Added definitions for PM2.5 sensor data. Add logic to statusResponse() to handle a STATUSSNS "switch1" field used by some sensors.
 *  Version 0.98.11 - Added definitions for ANALOG sensor data. Added map for "RANGE" to "range" which is used by analog inputs.
 *  Version 0.98.3 - Virtualized all sensor and trigger names
+*  Version 0.98.4 - Added support for load sensors
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -34,7 +35,7 @@
 * How to upgrade from Tasmota 8.X to Tasmota 11.X  https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/How%20to%20Upgrade%20from%20Tasmota%20from%208.X%20to%2011.X.pdf
 * Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 *
-*  Gary Milne - May, 2022
+*  Gary Milne - June, 2022
 *
 **/
 
@@ -51,6 +52,7 @@ sensorType = "All"
 //sensorType = "IR"
 //sensorType = "IO"
 //sensorType = "Light_Gesture_Sensor"
+//sensorType = "Load"
 //sensorType = "NFC"
 //sensorType = "Rain"
 //sensorType = "RF"
@@ -70,6 +72,7 @@ sensorType = "All"
                                            'RED' : 'red', 'BLUE' : 'blue', 'GREEN' : 'green', 'AMBIENT' : 'ambient', 'CCT' : 'cct' , 'PROXIMITY' : 'proximity',     //Some kind of gesture sensor.
                                            'OBJTMP' : 'objTmp', 'AMBTMP' : 'ambTmp',     //Infra Red Thermometer
                                            'EVENT' : 'event' , 'ENERGY' : 'energy', 'STAGE' : 'stage', //Lightning sensor. Note that distance is also part of lightning but is already defined.
+                                           'WEIGHT' : 'weight' , 'WEIGHTRAW' : 'weightRaw' , 'ABSRAW' : 'absRaw', //Load Sensor
                                            'UID' : 'uid', //NFC. Note that data is also a part of NFC but has already been defined elsewhere.
                                            'ACTIVE' : 'active', 'FLOWRATE' : 'flowRate',  //Rain. Note that event and total are also part of RAIN but are defined elsewhere.
                                            'PULSE' : 'pulse',  //RF sensor. Note that data, bits and protocol are all defined elsewhere. 
@@ -91,12 +94,11 @@ sensorType = "All"
                                            'RED', 'BLUE', 'GREEN', 'AMBIENT', 'CCT', 'PROXIMITY',     //Some kind of gesture sensor.
                                            'OBJTMP', 'AMBTMP',     //Infra Red Thermometer
                                            'EVENT', 'STAGE', 'ENERGY', //Lightning sensor. Note that distance is also part of lightning but is already defined.
+                                           'WEIGHT', 'WEIGHTRAW', 'ABSRAW', //Load Sensor
                                            //NFC. Note that data is also a part of NFC but has already been defined elsewhere.
                                            'ACTIVE', 'FLOWRATE',  //Rain. Note that event and total are also part of RAIN but are defined elsewhere.
                                            'PULSE'  //RF sensor. Note that data, bits and protocol are all defined elsewhere. 
                                            ]
-
-
 
 //First item in the pair is the name of the Tasmota sensor data type in uppercase form. The second name is the name of the driver unit attribute for that type of data.  For example 'tempUnit' will contain either a 'C' or 'F' if temperature is a valid data field.
 @Field static final sensor2UnitMap = ['TEMPERATURE' : 'tempUnit', 'PRESSURE' : 'pressureUnit', 'SPEED' : 'speedUnit']
@@ -119,8 +121,7 @@ metadata {
         command "tasmotaTelePeriod", [ [name:"Seconds*", type: "STRING", description: "The number of seconds between Tasmota data updates (TelePeriod XX)."] ]
         //command "test"
         command "clearAttributes", [[name:"Message: Clears all of the Attributes. Do browser refresh.", type: "BOOLEAN", description: ""]]
-        //command "clearAttributes", [[name:"Message", type: "STRING", description: "The number of seconds between Tasmota data updates (TelePeriod XX)."]]
-       
+        
         capability "TemperatureMeasurement"
         capability "RelativeHumidityMeasurement"
         
@@ -221,7 +222,8 @@ metadata {
             attribute "ultravioletIndex", "number"       //unit none provided
             attribute "soundPressureLevel", "number"     //unit dB    
         }           
-            
+        
+        //Flow
         if ( sensorType == "All" || sensorType == "Flow") {
             capability "LiquidFlowRate"
             attribute "rate", "number"
@@ -247,6 +249,12 @@ metadata {
             attribute "data", "string"
 	    }
             
+        //Infra-Red (Far) Thermometer -'{"STATUSSNS":{"Time":"2019-11-11T00:03:30","MLX90614":{"OBJTMP":23.8,"AMBTMP":22.7}}}'
+        if ( sensorType == "All" || sensorType == "IR_Thermometer") {
+            attribute "objTmp", "number"
+            attribute "ambTmp", "number"
+	    }
+            
         //Light_Gesture_Sensor - '{"STATUSSNS":{"Time":"2019-10-31T21:48:51","APDS9960":{"Red":282,"Green":252,"Blue":196,"Ambient":169,"CCT":4217,"Proximity":9}}}'
         if ( sensorType == "All" || sensorType == "Light_Gesture_Sensor") {
             attribute "red", "number"
@@ -256,12 +264,6 @@ metadata {
             attribute "cct", "number"
             attribute "proximity", "number"
 	    }
-        
-        //Far Infra-Red Thermometer -'{"STATUSSNS":{"Time":"2019-11-11T00:03:30","MLX90614":{"OBJTMP":23.8,"AMBTMP":22.7}}}'
-        if ( sensorType == "All" || sensorType == "IR_Thermometer") {
-            attribute "objTmp", "number"
-            attribute "ambTmp", "number"
-	    }
               
         //Lightning Sensor - '{"STATUSSNS":{"Time":"2020-01-01T17:07:07","AS3935":{"Event":4,"Distance":12,"Energy":58622,"Stage":1}}}'
         if ( sensorType == "All" || sensorType == "Lightning") {
@@ -269,6 +271,13 @@ metadata {
             attribute "distance", "number"
             attribute "energy", "number"
             attribute "stage", "number"
+	    }
+        
+        //Load Sensor - '{"StatusSNS":{"Time":"2022-06-11T10:58:18","HX711":{"Weight":0,"WeightRaw":4782,"AbsRaw":110004}}}'
+        if ( sensorType == "All" || sensorType == "Load") {
+            attribute "weight", "number"
+            attribute "weightRaw", "number"
+            attribute "absRaw", "number"
 	    }
             
         //NFC - '{"STATUSSNS":{"Time":"2019-01-10T18:31:39","PN532":{"UID":"94D8FC5F", "DATA":"ILOVETASMOTA"}}}'
@@ -353,9 +362,10 @@ def test(){
     //body = '{"STATUSSNS":{"Time": "2020-09-11T09:18:08","MLX90640": {"Temperature": [30.8, 28.5, 24.2, 25.7, 24.5, 24.6, 24.9]},"TempUnit": "C"}}' // - IR Thermal Sensor Array
     //body = '{"STATUSSNS":{"Time":"2018-08-18T16:13:47","MCP230XX":{"D0":0,"D1":0,"D2":1,"D3":0,"D4":0,"D5":0,"D6":0,"D7":1}}}'
     
-    body = '{"STATUSSNS":{"Time": "2021-09-22T17:00:00","VINDRIKTNING":{"PM2.5":2},"BME680": {"Temperature": 24.5,"Humidity":33.0,"DewPoint": 7.1,"Pressure": 987.7,"Gas": 1086.43 },"PressureUnit": "hPa","TempUnit": "C"}}'
+    //body = '{"STATUSSNS":{"Time": "2021-09-22T17:00:00","VINDRIKTNING":{"PM2.5":2},"BME680": {"Temperature": 24.5,"Humidity":33.0,"DewPoint": 7.1,"Pressure": 987.7,"Gas": 1086.43 },"PressureUnit": "hPa","TempUnit": "C"}}'
+    body = '{"StatusSNS":{"Time":"2022-06-11T10:58:18","HX711":{"Weight":0,"WeightRaw":4782,"AbsRaw":110004}}}'
     
-    //Troublesome examples
+    //Known non-working examples
     //body = '{"STATUSSNS":{"Time": "2020-03-03T00:00:00+00:00","TX23": {"Speed": {"Act": 14.8,"Avg": 8.5,"Min": 12.2,"Max": 14.8},"Dir": {"Card": "WSW","Deg": 247.5,"Avg": 266.1,"AvgCard": "W","Min": 247.5,"Max": 247.5,"Range": 0}},"SpeedUnit": "km/h"}}}'
     
     state.Action = "STATUS"
