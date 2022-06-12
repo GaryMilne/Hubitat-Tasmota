@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Universal Multi Sensor Driver
-*  Version: v0.98.4
+*  Version: v0.98.5
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Sensors. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -28,6 +28,7 @@
 *  Version 0.98.11 - Added definitions for ANALOG sensor data. Added map for "RANGE" to "range" which is used by analog inputs.
 *  Version 0.98.3 - Virtualized all sensor and trigger names
 *  Version 0.98.4 - Added support for load sensors
+*  Version 0.98.5 - Added capability to evaluate sensor output for testing
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -80,7 +81,7 @@ sensorType = "All"
                                           ]
 
 //If a Tasmota device has one of these fields in its StatusSNS then a Trigger will be created for that field.
-@Field static final triggerEligibleList =  ['TEMPERATURE', 'HUMIDITY', 
+@Field static final triggerEligibleList =  ['TEMPERATURE', 'HUMIDITY', 'DEWPOINT',
                                            'ACCELXAXIS', 'ACCELYAXIS', 'ACCELZAXIS', 'GYROXAXIS', 'GYROYAXIS', 'GYROZAXIS', 'YAW', 'ROLL', 'PITCH', //Accelerometer - Gyro
                                            'AIRQUALITYINDEX', 'ECO2', 'ECO', 'PM2.5', 'RESISTANCE', 'TVOC',  //Air Quality
                                            'ANALOG',     //Analog input
@@ -120,6 +121,7 @@ metadata {
         command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "A single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
         command "tasmotaTelePeriod", [ [name:"Seconds*", type: "STRING", description: "The number of seconds between Tasmota data updates (TelePeriod XX)."] ]
         //command "test"
+        command "evaluateSensorData", [ [name:"STATUS_8*", type: "STRING", description: "The STATUS 8 output from a Tasmota device in the form {\"STATUSSNS\":{\"Time\": \"2019-11-03T19:34:28\",\"BME280\": {\"Temperature\": 21.7,\"Humidity\": 66.6,\"Pressure\": 988.6},\"PressureUnit\": \"hPa\",\"TempUnit\": \"C\"}}}" ] ]
         command "clearAttributes", [[name:"Message: Clears all of the Attributes. Do browser refresh.", type: "BOOLEAN", description: ""]]
         
         capability "TemperatureMeasurement"
@@ -328,13 +330,12 @@ metadata {
 
 //Function used for quickly testing out SENSOR logic when I don't actually have the sensor.
 def test(){
-    
     //To test out a sensor paste the result of STATUS 8
     //Many of these are taken from https://tasmota.github.io/docs/Supported-Peripherals/  Others are from first hand experience or submitted by Hubitat users.
     //body = '{"StatusSNS":{"Time":"2022-05-25T10:26:47","VINDRIKTNING":{"PM2.5":2}}}'
     //body = '{"StatusSNS":{"Time":"2022-05-25T10:23:58","Switch1":"ON","VINDRIKTNING":{"PM2.5":17}}}'
     ///body = '{"StatusSNS":{"Time":"2022-05-26T00:34:18","ANALOG":{"Range":9}}}'
-    //body = '{"StatusSNS":{"Time":"2022-05-26T17:14:10","Switch1":"ON","ANALOG":{"Range":9},"SI7021":{"Temperature":63,"Humidity":49,"DewPoint":44},"IAQ":{"eCO2":450,"TVOC":125,"Resistance":76827, "BAD":76827},"PressureUnit": "hPa","TempUnit": "C"}}'
+    //body = '{"StatusSNS":{"Time":"2022-05-26T17:14:10","Switch1":"ON","ANALOG":{"Range":9},"SI7021":{"Temperature":63,"Humidity":49,"DewPoint":44},"IAQ":{"eCO2":450,"TVOC":125,"Resistance":76827},"PressureUnit": "hPa","TempUnit": "C"}}'
     ///body = '{"StatusSNS":{"Time":"2022-05-27T02:18:25","SI7021":{"Temperature":67,"Humidity":39,"DewPoint":41},"TempUnit":"F"}}'
     //body = '{"StatusSNS":{"Time":"2022-05-26T17:14:10","Switch1":"ON","ANALOG":{"Range":9},"SI7021":{"Temperature":63,"Humidity":49,"DewPoint":44},"IAQ":{"eCO2":450,"TVOC":125,"Resistance":76827, "BAD":76827},"PressureUnit": "hPa","TempUnit": "C"}}'
     //body = '{"StatusSNS":{"Time":"2022-05-27T21:23:35","ENERGY":{"TotalStartTime":"2022-03-10T23:36:04","Total":4.247,"Yesterday":0.054,"Today":0.111,"Power": 7,"ApparentPower":13,"ReactivePower":11,"Factor":0.57,"Voltage":122,"Current":0.11}}}'
@@ -367,11 +368,18 @@ def test(){
     
     //Known non-working examples
     //body = '{"STATUSSNS":{"Time": "2020-03-03T00:00:00+00:00","TX23": {"Speed": {"Act": 14.8,"Avg": 8.5,"Min": 12.2,"Max": 14.8},"Dir": {"Card": "WSW","Deg": 247.5,"Avg": 266.1,"AvgCard": "W","Min": 247.5,"Max": 247.5,"Range": 0}},"SpeedUnit": "km/h"}}}'
-    
     state.Action = "STATUS"
     state.ActionValue = "8"
     body = body.toUpperCase()
     statusResponse(body)
+}
+
+//Used to evaluate how well the driver will translate the Tasmota Sensor Data.
+void evaluateSensorData(String status8){
+    state.Action = "STATUS"
+    state.ActionValue = "8"
+    body = status8.toUpperCase()
+    statusResponse(body)  
 }
 
 def clearAttributes(){
@@ -696,7 +704,6 @@ def statusResponse(body){
 		//Go through each of the top level fields
 		STATUSSNS.each{
 			 //log("statusResponse", "Name: ${it.key}" , 3)
-		 
 			 DATA = STATUSSNS?."$it.key"
 			 String mystring = "${DATA}"
 			
