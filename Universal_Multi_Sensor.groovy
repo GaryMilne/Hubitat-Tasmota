@@ -1,6 +1,6 @@
 /**
-*  Tasmota Sync Universal Multi Sensor Driver
-*  Version: v0.98.5
+*  Tasmota Sync Universal Multi Sensor Driver - Dev
+*  Version: v0.99.2
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Sensors. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -29,6 +29,8 @@
 *  Version 0.98.3 - Virtualized all sensor and trigger names
 *  Version 0.98.4 - Added support for load sensors
 *  Version 0.98.5 - Added capability to evaluate sensor output for testing
+*  Version 0.99.1 - Added support to handle ANALOG CTENERGY JSON inputs
+*  Version 0.99.2 - Added support to handle two TEMPERATURE sensors. Reporting as temperature and temperature1.
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -46,6 +48,7 @@ import groovy.transform.Field
 sensorType = "All"
 //sensorType = "Accelerometer"
 //sensorType = "AirQuality"
+//sensorType = "Analog"
 //sensorType = "Chemical"
 //sensorType = "Energy"
 //sensorType = "Environmental"
@@ -59,10 +62,10 @@ sensorType = "All"
 //sensorType = "RF"
 
 //First item in the pair is the name of the Tasmota sensor data type in uppercase form. The second name is the driver attribute that will contain the data. They may be identical in some case and very different in others.
-@Field static final sensor2AttributeMap = ['TEMPERATURE' : 'temperature', 'HUMIDITY' : 'humidity', 
+@Field static final sensor2AttributeMap = ['TEMPERATURE' : 'temperature', 'TEMPERATURE1' : 'temperature1','HUMIDITY' : 'humidity', 
                                            'ACCELXAXIS' : 'accelXAxis' , 'ACCELYAXIS' : 'accelYAxis' , 'ACCELZAXIS' : 'accelZAxis' , 'GYROXAXIS' : 'gyroXAxis', 'GYROYAXIS' : 'gyroYAxis', 'GYROZAXIS' : 'gyroZAxis' , 'YAW' : 'yaw', 'PITCH' : 'pitch', 'ROLL' : 'roll',  //Accelerometer - Gyro
                                            'AIRQUALITYINDEX' : 'airQualityIndex', 'ECO2' : 'ECO2', 'ECO' : 'ECO', 'PM2.5' : 'pm25' , 'RESISTANCE' : 'resistance', 'TVOC' : 'tvoc',  //Air Quality
-                                           'ANALOG' : 'range',  //Analog input
+                                           'RANGE' : 'range', //Analog input
                                            'PH' : 'pH',         //Chemical
                                            'DISTANCE' : 'distance', //Physical
                                            'CURRENT' : 'current', 'POWER' : 'power' , 'VOLTAGE' : 'voltage', 'TOTAL' : 'total', 'YESTERDAY' : 'yesterday', 'TODAY' : 'today', 'APPARENTPOWER' : 'apparentPower', 'REACTIVEPOWER' : 'reactivePower' , 'FACTOR' : 'factor',  'FREQUENCY' : 'frequency', 'PERIOD' : 'period', 'TOTALSTARTTIME' : 'totalStartTime', //Electrical Energy
@@ -81,10 +84,10 @@ sensorType = "All"
                                           ]
 
 //If a Tasmota device has one of these fields in its StatusSNS then a Trigger will be created for that field.
-@Field static final triggerEligibleList =  ['TEMPERATURE', 'HUMIDITY', 'DEWPOINT',
+@Field static final triggerEligibleList =  ['TEMPERATURE', 'TEMPERATURE1', 'HUMIDITY', 'DEWPOINT',
                                            'ACCELXAXIS', 'ACCELYAXIS', 'ACCELZAXIS', 'GYROXAXIS', 'GYROYAXIS', 'GYROZAXIS', 'YAW', 'ROLL', 'PITCH', //Accelerometer - Gyro
                                            'AIRQUALITYINDEX', 'ECO2', 'ECO', 'PM2.5', 'RESISTANCE', 'TVOC',  //Air Quality
-                                           'ANALOG',     //Analog input
+                                           'ANALOG', 'RANGE',    //Analog inputs
                                            'PH',        //Chemical
                                            'DISTANCE', //Physical
                                            'CURRENT', 'POWER', 'VOLTAGE', //Electrical Energy
@@ -104,7 +107,7 @@ sensorType = "All"
 //First item in the pair is the name of the Tasmota sensor data type in uppercase form. The second name is the name of the driver unit attribute for that type of data.  For example 'tempUnit' will contain either a 'C' or 'F' if temperature is a valid data field.
 @Field static final sensor2UnitMap = ['TEMPERATURE' : 'tempUnit', 'PRESSURE' : 'pressureUnit', 'SPEED' : 'speedUnit']
 //First item in the pair is the name of the Tasmota sensor in uppercase form. The second name is suffix commonly associated with this type of data. For examples, degrees (°) applies to both C and F. Currently these suffixes are only used for event log entries.
-@Field static final sensor2UnitSuffix = ['TEMPERATURE' : 'Degrees', 'HUMIDITY' : '% RH', 'DEWPOINT' : 'Degrees', 'ILLUMINANCE' : 'lux', 'PM2.5' : 'µg/M³']
+@Field static final sensor2UnitSuffix = ['TEMPERATURE' : 'Degrees', 'TEMPERATURE1' : 'Degrees', 'HUMIDITY' : '% RH', 'DEWPOINT' : 'Degrees', 'ILLUMINANCE' : 'lux', 'PM2.5' : 'µg/M³']
 
 //Tasmota<<-->>Hubitat discrepancies. This driver uses the Tasmota names but will mirror those values to the expected Hubitat attributes. First value is tasmota name followed by the Hubitat attribute
 @Field static final mirroredAttributes = ['POWER' : 'energy', 'CURRENT' : 'amperage', 'ECO' : 'carbonMonoxide' , 'ECO2' : 'carbonDioxide' , 'FLOW' : 'rate']
@@ -120,7 +123,7 @@ metadata {
         command "tasmotaInjectRule"
         command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "A single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
         command "tasmotaTelePeriod", [ [name:"Seconds*", type: "STRING", description: "The number of seconds between Tasmota data updates (TelePeriod XX)."] ]
-        //command "test"
+        command "test"
         command "evaluateSensorData", [ [name:"STATUS_8*", type: "STRING", description: "The STATUS 8 output from a Tasmota device in the form {\"STATUSSNS\":{\"Time\": \"2019-11-03T19:34:28\",\"BME280\": {\"Temperature\": 21.7,\"Humidity\": 66.6,\"Pressure\": 988.6},\"PressureUnit\": \"hPa\",\"TempUnit\": \"C\"}}}" ] ]
         command "clearAttributes", [[name:"Message: Clears all of the Attributes. Do browser refresh.", type: "BOOLEAN", description: ""]]
         
@@ -135,6 +138,7 @@ metadata {
         //Attributes. These are usually at the sensor level of the STATUSSNS message.
         attribute "humidity", "number"               //unit %rh               //Tasmota example: {"Time":"2022-05-17T03:33:05","SI7021":{"Temperature":69,"Humidity":28,"DewPoint":34},"TempUnit":"F"}
         attribute "temperature", "number"            //unit F || C            //Tasmota example: {"Time":"2022-05-17T03:33:05","SI7021":{"Temperature":69,"Humidity":28,"DewPoint":34},"TempUnit":"F"}
+        attribute "temperature1", "number"            //unit F || C            //Tasmota example: {"Time":"2022-05-17T03:33:05","SI7021":{"Temperature":69,"Humidity":28,"DewPoint":34},"TempUnit":"F"}
             
         //Descriptors. These are at the top level of the STATUSSNS message.
         attribute "switch1", "string"           //Tasmota example: Some "SENSOR" devices have a switch. The RCWL-0516 STATUS 8 output is: {"StatusSNS":{"Time":"2022-05-25T10:23:58","Switch1":"ON"}}  I'm sure others use the same or similar, possibly even a switch array.
@@ -176,6 +180,11 @@ metadata {
         //ANALOG - '{"StatusSNS":{"Time":"2022-05-26T00:34:18","ANALOG":{"Range":9}}}'
         if ( sensorType == "All" || sensorType == "ANALOG") {
             attribute "range", "number"    //unit variable as this may be an analog input representing many unique things. //Tasmota example: {"StatusSNS":{"Time":"2022-05-26T00:34:18","ANALOG":{"Range":9}}}
+            //CTEnergy - {"STATUSSNS":{"TIME":"2022-06-26T22:06:56","ANALOG":{"CTENERGY":{"ENERGY":2.882,"POWER":49,"VOLTAGE":230,"CURRENT":0.215}}}}.
+            attribute "energy", "number"
+            attribute "power", "number"
+            attribute "voltage", "number"
+            attribute "current", "number"
 	    }
             
         //Chemical
@@ -330,6 +339,7 @@ metadata {
 
 //Function used for quickly testing out SENSOR logic when I don't actually have the sensor.
 def test(){
+    
     //To test out a sensor paste the result of STATUS 8
     //Many of these are taken from https://tasmota.github.io/docs/Supported-Peripherals/  Others are from first hand experience or submitted by Hubitat users.
     //body = '{"StatusSNS":{"Time":"2022-05-25T10:26:47","VINDRIKTNING":{"PM2.5":2}}}'
@@ -362,7 +372,7 @@ def test(){
     //body = '{"STATUSSNS":{"Time":"2022-01-07T19:43:24","Switch1":"ON","Switch2":"ON","ENERGY":{"TotalStartTime":"2021-04-03T18:52:24","Total":[0.005,1.507],"Yesterday":[0.000,0.648],"Today":[0.000,0.197],"Period":[ 0, 0],"Power":[ 0,26],"ApparentPower":[ 0,43],"ReactivePower":[ 0,33],"Factor":[0.00,0.62],"Frequency":50.016,"Voltage":225,"Current":[0.000,0.189]},"ESP32":{"Temperature":65.6},"TempUnit":"C"}}'
     //body = '{"STATUSSNS":{"Time": "2020-09-11T09:18:08","MLX90640": {"Temperature": [30.8, 28.5, 24.2, 25.7, 24.5, 24.6, 24.9]},"TempUnit": "C"}}' // - IR Thermal Sensor Array
     //body = '{"STATUSSNS":{"Time":"2018-08-18T16:13:47","MCP230XX":{"D0":0,"D1":0,"D2":1,"D3":0,"D4":0,"D5":0,"D6":0,"D7":1}}}'
-    
+    //body = '{"STATUSSNS":{"TIME":"2022-06-26T16:20:33","DS18B20-1":{"ID":"011937B1E1FD","TEMPERATURE":86.7},"DS18B20-2":{"ID":"011937D1CBA3","TEMPERATURE":-11.0},"TEMPUNIT":"F"}}'
     //body = '{"STATUSSNS":{"Time": "2021-09-22T17:00:00","VINDRIKTNING":{"PM2.5":2},"BME680": {"Temperature": 24.5,"Humidity":33.0,"DewPoint": 7.1,"Pressure": 987.7,"Gas": 1086.43 },"PressureUnit": "hPa","TempUnit": "C"}}'
     body = '{"StatusSNS":{"Time":"2022-06-11T10:58:18","HX711":{"Weight":0,"WeightRaw":4782,"AbsRaw":110004}}}'
     
@@ -384,6 +394,7 @@ void evaluateSensorData(String status8){
 
 def clearAttributes(){
     log("clearAttributes", "Clearing All Attributes", 0)
+    
     sensor2AttributeMap.each { 
         log("clearAttributes", "Clearing attribute: $it.value", 3)
         device.deleteCurrentState(it.value)
@@ -397,6 +408,13 @@ def clearAttributes(){
     device.deleteCurrentState("speedUnit")
     device.deleteCurrentState("switch1")
     device.deleteCurrentState("switch2")    
+    
+    state.sensorTriggers = []
+    state.itemNames = []
+    state.sensorNames = []
+    state.lastMessage = ""
+    state.thisMessage = ""
+    
     updateStatus ("Attributes Cleared - Refresh Browser!")
 }
 
@@ -677,6 +695,7 @@ def syncTasmota(body){
 //*****************************************************************************************************************************************************************************************************
 
 
+
 //*************************************************************************************************************************************************************************************************************
 //******
 //****** UNIQUE: The only things that gets routed here are responses to Hubitat initiated requests for Sensor updates.
@@ -686,6 +705,14 @@ def syncTasmota(body){
 def statusResponse(body){
     log ("statusResponse", "Entering, data Received.", 1)
     log ("statusResponse", "Raw data is: ${body}.", 0)
+    
+    // An ANALOG sensor might have multi-level data as in this case with CTENERGY. I'm taking the easy approach and "un-nesting" the JSON data into 2 levels.
+    // Converts --> {"StatusSNS":{"Time":"2022-06-26T22:06:56","ANALOG":{"Energy":2.882,"Power":49,"Voltage":230,"Current":0.215}}}} into --> {"StatusSNS":{"Time":"2022-06-26T22:06:56","ANALOG":{"Energy":2.882,"Power":49,"Voltage":230,"Current":0.215}}}}
+    // Yes there is an excess '}' on the end but the JSON handler does not seem to care. Other corrections for nested ANALOG data should be added here and work in the same way.
+    if (body.contains('"ANALOG":{"CTENERGY"')==true ) {
+        body = body?.replace('"ANALOG":{"CTENERGY"','"ANALOG"') 
+        log("statusResponse", "Modified ANALOG Body ${body}" , 3)
+    }
     
     //Now parse into JSON to extract data.
     body = parseJson(body)
@@ -698,7 +725,7 @@ def statusResponse(body){
         STATUSSNS = body?.STATUSSNS
         //STATUSSNS looks like: [TIME:2022-05-17T04:26:39, TEMPUNIT:F, SI7021:[HUMIDITY:31, TEMPERATURE:64, DEWPOINT:33]] but may look like {"StatusSNS":{"Time":"2022-05-25T10:23:58","Switch1":"ON"}}
         log("statusResponse","STATUSSNS is: " + STATUSSNS, 1)
-            
+
 		def sensorNames = []
 		def itemNames = []
 		//Go through each of the top level fields
@@ -711,7 +738,7 @@ def statusResponse(body){
 			if (mystring.contains("[") == true ) {
 				sensorNames.add(it.key) 
 				log("statusResponse", "Add sensor: ${it.key}" , 3)
-				}
+                }
 			else { 
 				itemNames.add(it.key)  
 				log("statusResponse", "Add item: ${it.key}" , 3)
@@ -757,16 +784,15 @@ def statusResponse(body){
 		}
                 
         log("statusResponse", "****************** Items Processed ******************" , 2)
- 
         //Now we go through the Sensors and gather the underlying data
         def sensorTriggers = []
 		sensorNames.any{ sensors ->
 			sensor = sensors
             sensorFields = STATUSSNS?."$sensor"
-			log("statusResponse", "SENSOR is: ${sensor} and Sensor fields are: ${sensorFields}" , 1)
+            log("statusResponse", "SENSOR is: ${sensor} and Sensor fields are: ${sensorFields}" , 1)
 			//Iterate through the list of data items.
 			sensorFields.any { data ->
-				try {
+				try {   
 				log("statusResponse", "Data is: ${data.key}  Value: ${data.value}" , 0)
 				//Lookup the Hubitat attribute name used for this sensor value
 				attribute = sensor2AttributeMap[data.key]
@@ -776,9 +802,8 @@ def statusResponse(body){
                     sendEvent( name: attribute, value: data.value )
 				    log("statusResponse", "${data.key} data (${data.value}) mapped to Hubitat attribute: ${attribute}" , 1)
 
-                    //Test to see if attribute is a valid Trigger. If is is then add it.
-                    if ( triggerEligibleList.contains(data.key) == true){
-                        
+                    //Test to see if attribute is a valid Trigger.
+                    if ( triggerEligibleList.contains(data.key) == true ){
                         log("statusResponse", "${data.key} is trigger eligible" , 3)
                         trigger = ("Tele-${sensor}#${data.key}")    //Note that we use the data.key and not data.value.
                         sensorTriggers.add (trigger) 
@@ -856,6 +881,13 @@ def tasmotaInjectRule(){
             
             attribute = trigger.substring(trigger.lastIndexOf("#")+1)
             log("tasmotaInjectRule", "Attribute is: " + attribute , 3)    
+            
+            //If the VarString2 already contains a match for this attribute then we will append a 1 to the end of the attribute.
+            //This should allow up to two of the same sensors on a device assuming the correct attributes have been defined.
+            if (varString2.contains(attribute)) {
+                log("tasmotaInjectRule", "Already contains attribute: " + attribute , 3)   
+                attribute = attribute + "1"
+            }
             varString2 = varString2 + "'${attribute}':'%var${nextVar}%',"
 			nextVar = nextVar + 1
         }
