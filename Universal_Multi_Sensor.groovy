@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Universal Multi Sensor Driver - Dev
-*  Version: v0.99.2
+*  Version: v0.99.3
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Sensors. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -31,6 +31,7 @@
 *  Version 0.98.5 - Added capability to evaluate sensor output for testing
 *  Version 0.99.1 - Added support to handle ANALOG CTENERGY JSON inputs
 *  Version 0.99.2 - Added support to handle two TEMPERATURE sensors. Reporting as temperature and temperature1.
+*  Version 0.99.3 - Added function adjustBody for pre-processing of ANALOG JSON inputs as well as de-duping Temperature fields.
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -599,10 +600,11 @@ def hubitatResponse(body){
                 //"HSBColor":"248,84,0","White":68,"CT":500,"Channel":[0,0,0,0,68],"Scheme":0,"Fade":"OFF","Speed":20,"LedTable":"ON","Wifi":{"AP":1,"SSId":"5441","BSSId":"A0:04:60:95:0E:62","Channel":6,"Mode":"11n",
                 //"RSSI":100,"Signal":-47,"LinkCount":1,"Downtime":"0T00:00:06"}}
                 //Does nothing really in a sensor only device but retained for compatibility with all other device drivers.
+            
                 log ("hubitatResponse","Setting device handler values to match device.", 0)
                 updateStatus("Complete:Success")
             	break
-            
+
             default:
                 //Response to any other undefined commands will come here.  This is most likely because of a custom command
             	//If we come back to this spot we know a command was issued and SOMETHING came back so we know the command at least got to the device.
@@ -695,16 +697,15 @@ def syncTasmota(body){
 //*****************************************************************************************************************************************************************************************************
 
 
-
 //*************************************************************************************************************************************************************************************************************
 //******
-//****** UNIQUE: The only things that gets routed here are responses to Hubitat initiated requests for Sensor updates.
+//****** UNIQUE: //Here we make adjustments to the Body for one off instances. This function is only present in the Universal Sensor example.
 //******
 //*************************************************************************************************************************************************************************************************************
 
-def statusResponse(body){
-    log ("statusResponse", "Entering, data Received.", 1)
-    log ("statusResponse", "Raw data is: ${body}.", 0)
+def adjustBody(String body){
+  
+    log("adjustBody", "Received body is: ${body}" , 3)
     
     // An ANALOG sensor might have multi-level data as in this case with CTENERGY. I'm taking the easy approach and "un-nesting" the JSON data into 2 levels.
     // Converts --> {"StatusSNS":{"Time":"2022-06-26T22:06:56","ANALOG":{"Energy":2.882,"Power":49,"Voltage":230,"Current":0.215}}}} into --> {"StatusSNS":{"Time":"2022-06-26T22:06:56","ANALOG":{"Energy":2.882,"Power":49,"Voltage":230,"Current":0.215}}}}
@@ -713,6 +714,38 @@ def statusResponse(body){
         body = body?.replace('"ANALOG":{"CTENERGY"','"ANALOG"') 
         log("statusResponse", "Modified ANALOG Body ${body}" , 3)
     }
+    
+    //If a device has multiple Temperature Sensors then the "TEMPERATURE" field will occur more than once.
+    //When that happens we have to rename the second Temperature field to Temperature1 so the attributes are reflected correctly.
+    tempCount = body.count("TEMPERATURE")
+    log("statusResponse", "tempCount is: ${tempCount}" , 3)
+    if (tempCount > 1 ){
+        	body = body?.replace("TEMPERATURE","TEMPERATURE1") 
+            body = body?.replaceFirst("TEMPERATURE1","TEMPERATURE")             
+    }
+    
+    log("adjustBody", "Adjusted Body ${body}" , 3)
+    return(body)
+}
+//*****************************************************************************************************************************************************************************************************
+//******
+//****** End of adjustBody()
+//******
+//*****************************************************************************************************************************************************************************************************
+
+//*************************************************************************************************************************************************************************************************************
+//******
+//****** UNIQUE: The only things that gets routed here are responses to Hubitat initiated requests for Sensor updates.
+//******
+//*************************************************************************************************************************************************************************************************************
+
+def statusResponse(body){
+    //If we want to test some input then add a line here like the following example
+    //body = '{"STATUSSNS":{"TIME":"2022-06-26T16:20:33","DS18B20-1":{"ID":"011937B1E1FD","TEMPERATURE":86.7},"DS18B20-2":{"ID":"011937D1CBA3","TEMPERATURE":-11.0},"TEMPUNIT":"F"}}'
+    
+    //log ("statusResponse", "Entering, data Received.", 1)
+    //log ("statusResponse", "Raw data is: ${body}.", 0)
+    body = adjustBody(body)
     
     //Now parse into JSON to extract data.
     body = parseJson(body)
