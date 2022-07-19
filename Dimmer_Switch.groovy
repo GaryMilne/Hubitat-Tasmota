@@ -427,7 +427,7 @@ def syncTasmota(body){
         log ("syncTasmota", "Tasmota Sync request processing.", 1)
         state.Action = "Tasmota"
         state.ActionValue = "Sync"
-        state.lastTasmotSync = new Date().format('yyyy-MM-dd HH:mm:ss')
+        state.lastTasmotaSync = new Date().format('yyyy-MM-dd HH:mm:ss')
 		
         //Now parse into JSON to extract data.
         body = parseJson(body)
