@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Universal Multi Sensor Driver - Dev
-*  Version: v0.99.3
+*  Version: v0.99.31
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Sensors. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -32,6 +32,7 @@
 *  Version 0.99.1 - Added support to handle ANALOG CTENERGY JSON inputs
 *  Version 0.99.2 - Added support to handle two TEMPERATURE sensors. Reporting as temperature and temperature1.
 *  Version 0.99.3 - Added function adjustBody for pre-processing of ANALOG JSON inputs as well as de-duping Temperature fields.
+*  Version 0.99.31 - Fixed error detecting duplicate sensor data types.
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -39,7 +40,7 @@
 * How to upgrade from Tasmota 8.X to Tasmota 11.X  https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/How%20to%20Upgrade%20from%20Tasmota%20from%208.X%20to%2011.X.pdf
 * Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 *
-*  Gary Milne - June, 2022
+*  Gary Milne - July, 2022
 *
 **/
 
@@ -653,7 +654,7 @@ def syncTasmota(body){
         log ("syncTasmota", "Tasmota Sync request processing.", 1)
         state.Action = "Tasmota"
         state.ActionValue = "Sync"
-        state.lastTasmotaSync = new Date().format('yyyy-MM-dd HH:mm:ss')
+        state.lastTasmotSync = new Date().format('yyyy-MM-dd HH:mm:ss')
 		
         //Now parse into JSON to extract data.
         body = parseJson(body)
@@ -909,19 +910,20 @@ def tasmotaInjectRule(){
 		triggers.each { trigger ->
 		    log("tasmotaInjectRule", "trigger name is: " + trigger , 3)    
             rule3 = rule3 + "ON ${trigger} DO backlog0 var${nextVar} %value% ; RuleTimer1 1 ENDON "   
-	        //Build strings that will be used in the final rules.
+	        //Build strings that will be used in the final rules. //varString1 example: '%var9%','%var10%','%var11%,'%var12%'    varString2 example: 'temperature':'%var9%','temperature1':'%var10%','humidity':'%var11%','dewPoint':'%var12%'
             varString1 = varString1 + "'%var${nextVar}%',"
             
             attribute = trigger.substring(trigger.lastIndexOf("#")+1)
             log("tasmotaInjectRule", "Attribute is: " + attribute , 3)    
             
-            //If the VarString2 already contains a match for this attribute then we will append a 1 to the end of the attribute.
+            //If the VarString2 already contains a match for this attribute (Example: [Tele-DS18B20-2#TEMPERATURE1, Tele-DS18B20-1#TEMPERATURE]) then we will append a 1 to the end of the attribute.
             //This should allow up to two of the same sensors on a device assuming the correct attributes have been defined.
-            if (varString2.contains(attribute)) {
+            if (varString2.matches(attribute)) {
                 log("tasmotaInjectRule", "Already contains attribute: " + attribute , 3)   
                 attribute = attribute + "1"
             }
             varString2 = varString2 + "'${attribute}':'%var${nextVar}%',"
+            log("tasmotaInjectRule", "XXvarString2 is: " + varString2 , 3)        
 			nextVar = nextVar + 1
         }
     
