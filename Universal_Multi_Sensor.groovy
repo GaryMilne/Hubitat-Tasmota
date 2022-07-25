@@ -32,7 +32,7 @@
 *  Version 0.99.1 - Added support to handle ANALOG CTENERGY JSON inputs
 *  Version 0.99.2 - Added support to handle two TEMPERATURE sensors. Reporting as temperature and temperature1.
 *  Version 0.99.3 - Added function adjustBody for pre-processing of ANALOG JSON inputs as well as de-duping Temperature fields.
-*  Version 0.99.31 - Fixed error detecting duplicate sensor data types.
+*  Version 0.99.31 - Changed handling sensors and triggers to produce a sorted list for more intuitive mapping to attributes.
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -416,6 +416,8 @@ def clearAttributes(){
     state.sensorNames = []
     state.lastMessage = ""
     state.thisMessage = ""
+    state.remove("sensorTriggers2")
+    state.remove("lastTasmotSync")
     
     updateStatus ("Attributes Cleared - Refresh Browser!")
 }
@@ -721,8 +723,8 @@ def adjustBody(String body){
     tempCount = body.count("TEMPERATURE")
     log("statusResponse", "tempCount is: ${tempCount}" , 3)
     if (tempCount > 1 ){
-        	body = body?.replace("TEMPERATURE","TEMPERATURE1") 
-            body = body?.replaceFirst("TEMPERATURE1","TEMPERATURE")             
+        	//body = body?.replace("TEMPERATURE","TEMPERATURE1") 
+            //body = body?.replaceFirst("TEMPERATURE1","TEMPERATURE")             
     }
     
     log("adjustBody", "Adjusted Body ${body}" , 3)
@@ -758,6 +760,7 @@ def statusResponse(body){
         state.lastSensorData = new Date().format('yyyy-MM-dd HH:mm:ss')
         STATUSSNS = body?.STATUSSNS
         //STATUSSNS looks like: [TIME:2022-05-17T04:26:39, TEMPUNIT:F, SI7021:[HUMIDITY:31, TEMPERATURE:64, DEWPOINT:33]] but may look like {"StatusSNS":{"Time":"2022-05-25T10:23:58","Switch1":"ON"}}
+        // OR {"StatusSNS":{"Time":"2022-07-24T03:55:29","DS18B20-1":{"Id":"3C01F0965038","Temperature":75.0},"DS18B20-2":{"Id":"3C01F0967907","Temperature":74.5},"TempUnit":"F"}}
         log("statusResponse","STATUSSNS is: " + STATUSSNS, 1)
 
 		def sensorNames = []
@@ -780,6 +783,7 @@ def statusResponse(body){
 			}
 		
         //Make these viewable to the user.
+        sensorNames = sensorNames.sort()
 		state.sensorNames = sensorNames.toString()
         state.itemNames = itemNames.toString()
         state.remove("Sensors")
@@ -852,8 +856,9 @@ def statusResponse(body){
                 catch (Exception e) { log ("statusResponse", "Error processing sensor ${data.key} with data ${data.value}", -1) } 
 			}
 		}  //End of sensorNames.any
-        
+        sensorTriggers = sensorTriggers.sort()
         state.sensorTriggers = sensorTriggers.toString()
+        
         log("statusResponse", "****************** Data Processed ******************" , 2)
         
 		log("statusResponse","STATUS 8 - SENSOR values processed.", 0)
@@ -916,14 +921,14 @@ def tasmotaInjectRule(){
             attribute = trigger.substring(trigger.lastIndexOf("#")+1)
             log("tasmotaInjectRule", "Attribute is: " + attribute , 3)    
             
-            //If the VarString2 already contains a match for this attribute (Example: [Tele-DS18B20-2#TEMPERATURE1, Tele-DS18B20-1#TEMPERATURE]) then we will append a 1 to the end of the attribute.
+            //If the VarString2 already contains a match for this attribute (Example: [Tele-DS18B20-2#TEMPERATURE, Tele-DS18B20-1#TEMPERATURE]) then we will append a 1 to the end of the attribute.
             //This should allow up to two of the same sensors on a device assuming the correct attributes have been defined.
-            if (varString2.matches(attribute)) {
+            if (varString2.contains(attribute)) {
                 log("tasmotaInjectRule", "Already contains attribute: " + attribute , 3)   
                 attribute = attribute + "1"
             }
             varString2 = varString2 + "'${attribute}':'%var${nextVar}%',"
-            log("tasmotaInjectRule", "XXvarString2 is: " + varString2 , 3)        
+            log("tasmotaInjectRule", "varString2 is: " + varString2 , 3)        
 			nextVar = nextVar + 1
         }
     
