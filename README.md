@@ -21,4 +21,4 @@ There are 12 unique drivers that perform realtime native synchronisation between
 Main thread on Hubitat is: https://community.hubitat.com/t/tasmota-sync-drivers-native-and-real-time-synchronization-between-hubitat-and-tasmota-11/93651 <br/>
 Sensor thread on Hubitat is: https://community.hubitat.com/t/tasmota-sync-universal-sensor-driver-released/95474 <br/>
 Hit me up on Hubitat community @garyjmilne if you have any questions.<br/>
-Last Updated 6/4/22.<br/>
+Last Updated 8/24/22.<br/>
