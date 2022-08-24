@@ -993,9 +993,9 @@ def statusResponse(body){
        
        //Collate all of the required data regarding a sensor into a single record.
        sensorData.each { item ->
-           log("statusResponse", "Item: ${item}" , 0)
+           log("statusResponse", "Item: ${item}" , 1)
            details = item.tokenize(':')
-           log("statusResponse", "Sensor: ${details[0]}  Type: ${details[1]}  Data: ${details[2]}  Attribute: ${details[3]}" , 0)
+           log("statusResponse", "Sensor: ${details[0]}  Type: ${details[1]}  Data: ${details[2]}  Attribute: ${details[3]}" , 2)
            sensorAttributes.add(details[3].toUpperCase())
           }
        
