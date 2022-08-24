@@ -785,7 +785,7 @@ def syncTasmota(body){
         //Only changes will get logged so we can report everything. In Tasmota, "power" is the switch state but we use "SWITCHX" in the TSYNC JSON.
         
         if ( switchCount >= 1 ){
-            if (body?.SWITCH1 != '' && body?.SWITCH1 != null) { switch1 = body?.SWITCH1 ; log ("syncTasmota","Switch is: ${switch1}", 0) }
+            if (body?.SWITCH1 != '' && body?.SWITCH1 != null) { switch1 = body?.SWITCH1 ; log ("syncTasmota","Switch is: ${switch1}", 2) }
             if ( switch1.toInteger() == 0 ) { sendEvent(name: "switch1", value: "off", descriptionText: "Switch switch1 was turned off.") ; sendEvent(name: "switch", value: "off", descriptionText: "Linked switch was turned off.") }
             if ( switch1.toInteger() == 1 ) { sendEvent(name: "switch1", value: "on", descriptionText: "Switch switch1 was turned on.") ; sendEvent(name: "switch", value: "on", descriptionText: "Linked switch was turned on.") }
             }
