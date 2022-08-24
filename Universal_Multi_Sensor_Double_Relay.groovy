@@ -53,7 +53,7 @@ import groovy.transform.Field
 
 //This determines the number of power relays that will appear within the device. These will always be switch1 and switch2 and should be configured as such in Tasmota.
 //The device may also have additional sensors that act like switches. These should be configured as switch3 and switch4 in Tasmota if present. 
-@Field static final Integer switchCount = 0
+@Field static final Integer switchCount = 2
 
 sensorType = "All"
 //sensorType = "Common"        //Includes AirQuality, Energy and Environmental.
@@ -129,7 +129,7 @@ sensorType = "All"
 @Field static final mirroredAttributes = ['POWER' : 'energy', 'CURRENT' : 'amperage', 'ECO' : 'carbonMonoxide' , 'ECO2' : 'carbonDioxide' , 'FLOW' : 'rate']
 
 metadata {
-		definition (name: "Tasmota Sync - Universal Multi Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor.groovy", singleThreaded: true )  {
+		definition (name: "Tasmota Sync - Universal Multi Sensor Double Relay", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Double_Relay.groovy", singleThreaded: true )  {
         //capability "LiquidFlowRate"
         //capability "PressureMeasurement"
         capability "Switch"
