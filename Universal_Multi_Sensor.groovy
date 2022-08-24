@@ -132,7 +132,6 @@ metadata {
 		definition (name: "Tasmota Sync - Universal Multi Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor.groovy", singleThreaded: true )  {
         //capability "LiquidFlowRate"
         //capability "PressureMeasurement"
-        capability "Switch"
         capability "Refresh"
         capability "Sensor"
   
@@ -156,6 +155,7 @@ metadata {
         log.info ("SwitchCount is: ${switchCount}")
         //switch1 and switch2 Reserved for power relays
         if (switchCount >= 1) { 
+            capability "Switch"
             attribute "switch", "string"
             attribute "switch1",  "string" 
             command "on", [[name:"'On' and 'Switch1 On' are the same. Attr switch & switch1 synchronized."]]
