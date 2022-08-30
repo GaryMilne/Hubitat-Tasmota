@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Bulb Driver
-*  Version: v1.0.0
+*  Version: v1.0.1
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Bulb. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -23,6 +23,7 @@
 *  Version 0.94.0 - Changed versioning to comply with Semantic Versioning standards (https://semver.org/). Moved CORE changelog to beginning of CORE section.
 *  Version 0.98.0 - All versions incremented and synchronised for HPM plublication
 *  Version 1.0.0 - All versions incremented and synchronised for HPM plublication via CSTEELE
+*  Version 1.0.1 - Incremented Core 0.98.2. Fixed "DIMMER" code with improved version from Dimmer implementation.
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -30,7 +31,7 @@
 * How to upgrade from Tasmota 8.X to Tasmota 11.X  https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/How%20to%20Upgrade%20from%20Tasmota%20from%208.X%20to%2011.X.pdf
 * Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 *
-*  Gary Milne - May, 2022
+*  Gary Milne - Aug 29, 2022
 *
 **/
 
@@ -44,6 +45,7 @@ metadata {
         capability "Switch"
         capability "SwitchLevel"
 		capability "Refresh"
+        capability "Bulb"
 
         command "fadeSpeed", [ [name:"Duration in seconds for a transation to complete (Persistent). FadeSpeed attribute will be 2X this number.*", type: "STRING", description: "The time in seconds (0 - 20) for any transition operation to complete. fadeSpeed will display as 2X this value as Tasmota uses 0.5 seconds intervals. Note: Fade must be turned on for this setting to have any effect."] ]
         command "fadeToggle"
@@ -395,23 +397,33 @@ def hubitatResponse(body){
                 	}
                 break
                 
-            case ["DIMMER"]:  //Usually referred to as level in Hubitat
+             case ["DIMMER"]:  //Usually referred to as Level in Hubitat
                 log("hubitatResponse", "Command: Dimmer ${body.DIMMER}", 1)
-                if (ActionValue.toInteger() == body.DIMMER.toInteger()){
-                	log ("hubitatResponse", "Dimmer applied successfully", 0)
-                    sendEvent(name: "switch", value: "on", displayed:true)
-                    sendEvent(name: "color", value: body.COLOR, displayed:true)
-                    sendEvent(name: "level", value: body.DIMMER, displayed:true)
-                    sendEvent(name: "Mireds", value: body.CT, displayed:false)
-                    sendEvent(name: "colorTemperature", value: miredsToKelvin(body.CT))
-                    setHSVfromColor(body.COLOR)
-                    updateStatus("Complete:Success")
-                    } 
-                else {
-                    log("hubitatResponse","Dimmer state failed to apply", -1)
-                    updateStatus("Complete:Fail")                
+                //We may use dimmer + or dimmer - to increment or decrement the actual dimmer brightness.
+                //So we need to handle a non numeric condition
+                try { if (ActionValue?.toInteger() == true) isInteger == true }
+                catch (e) {isInteger == False}
+                
+                if ( isInteger == true) {
+                    if ( ActionValue.toInteger() == body.DIMMER.toInteger() ){
+                	    log ("hubitatResponse", "Dimmer applied successfully", 0)
+                        updateStatus("Complete:Success")
+                        sendEvent(name: "level", value: ActionValue, displayed:true, isStateChange: true)
+                        sendEvent(name: "switch", value: "on", displayed:true)
+                        } 
+                    else {
+                        updateStatus("Complete:Fail")                
+                        log("hubitatResponse","Dimmer state failed to apply", -1)
+                        }
                     }
-            	break
+                else {
+                    //ActionValue was non numeric (Dimmer + or Dimmer -) so we have to assume the new value was a correct increment or decrement.
+                    log ("hubitatResponse", "Dimmer ${ActionValue} applied successfully", 0)
+                    updateStatus("Complete:Success")
+                    sendEvent(name: "level", value: body.DIMMER.toInteger(), displayed:true, isStateChange: true)
+                    sendEvent(name: "switch", value: "on", displayed:true)
+                } 
+                break
                 
              case ["CT"]:
             	log("hubitatResponse","Command: CT ${body.CT} mireds : " + miredsToKelvin(body.CT) + "Kelvin", 1)
@@ -688,6 +700,8 @@ def tasmotaInjectRule(){
 *  Version 0.96C - Added handling for Tasmota "WARNING" message that occurs when authentication fails and possibly other scenarios.
 *  Version 0.97 - Added option in settings to disable use of HTML enhancements in logging. These do not show correctly on a secondary hub in a two+ hub environment. This option allows them to be disabled.
 *  Version 0.98.0 - Changed versioning to comply with Semantic Versioning standards (https://semver.org/). Moved CORE changelog to beginning of CORE section.
+*  Version 0.98.1 - Added a "warning" category and label to the logging section.
+*  Version 0.98.2 - Added a "tooltip" function into the HTML area. Not yet being used.
 *
 */
 
@@ -827,7 +841,7 @@ def callTasmota(action, receivedvalue){
 //******
 //****** STANDARD: parse(). This function handles all communication from Tasmota, both the Hubitat and Tasmota initiated changes. 
 //****** When these changes originate on Hubitat they will be routed to hubitatResponse.
-//****** When the changes originate on Tasmota they will be routed to syncTasmota for hubitatResponse() and statusResponse() for SENSOR data is applicable
+//****** When the changes originate on Tasmota they will be routed to syncTasmota for hubitatResponse() and statusResponse() for SENSOR data if applicable
 //****** Note: A Hubitat initiated change will cause RULE3 on Tasmota to fire and ALSO send a TSync request. This is expected..... 
 //****** Note: .....if they are received during a transaction (inTransaction==true) then they are ignored as they are just an "echo" of the command sent from Hubitat.
 //****** Note: .....These are ignored when within the debounce window.
@@ -945,7 +959,7 @@ private log(name, message, int loglevel){
     }
      
     //These will be the default icons for the primary functions. Others that may be useful in future ☎️ 📜 👎 👍 🔂 🎬 ⚰️ 🚪 💣
-    if (name.toString().toUpperCase().contains("CALLTASMOTA")==true ) icon2 = "📞 "  
+    if (name.toString().toUpperCase().contains("CALLTASMOTA")==true ) icon2 = "📞 "
     if (name.toString().toUpperCase().contains("ACTION")==true ) icon2 = "⚡ "
     if (name.toString().toUpperCase().contains("DELETE")==true ) icon2 = "🗑️ "
     if (name.toString().toUpperCase().contains("SAVE")==true ) icon2 = "💾 "
@@ -954,6 +968,7 @@ private log(name, message, int loglevel){
     //These will ovverride the secondary icons Keyword search and icon replacement. Obviously icon2 may get overwritten so order is important.
     if (message.toString().toUpperCase().contains("APPLIED SUCCESSFULLY")==true ) icon2 = "⭐ "
     if (message.toString().toUpperCase().contains("FAILED TO APPLY")==true ) icon2 = "💩 "
+    if (message.toString().toUpperCase().contains("WARNING")==true ) icon2 = "🚩 "
     
     if (message.toString().toUpperCase().contains("ENTER")==true ) icon2 = "🏁 "
     if (message.toString().toUpperCase().contains("FINISH")==true ) icon3 = "🛑 "
@@ -1068,6 +1083,19 @@ String dimGray(s) { return '<font color = "DimGray">' + s + '</font>'}
 String slateGray(s) { return '<font color = "SlateGray">' + s + '</font>'}
 String black(s) { return '<font color = "Black">' + s + '</font>'}
 
+
+//This does not work fully yet but I'm leaving it here as I hope to get this working at some point and the basic code does work to show a tooltip.
+def tooltip (String message) {
+s = '<style> .tooltip { position: relative; display: inline-block; border-bottom: 1px dotted black; }'
+s = s + '.tooltip .tooltiptext { visibility: hidden; width: 120px; background-color:lightsalmon; background-color: black; color: #fff; text-align: center; padding: 5px 0; border-radius: 6px; position: absolute; z-index: 1; } '
+s = s + '.tooltip:hover .tooltiptext { visibility: visible; background-color:lightsalmon; } </style>'
+s = s + '<div class="tooltip">Help..<span class="tooltiptext">YYYYY</span> </div>'
+s = s.replace("YYYYY", message) 
+return s
+
+}
+
+
 //*****************************************************************************************************************************************************************************************************
 //******
 //****** End of HTML enhancement functions.
@@ -1107,7 +1135,7 @@ def setColorTemperature(kelvin, Dimmer){
 
 //If 3 arguments are provided or only CT and duration are provided it will come here. In the latter case Dimmer will be null.
 def setColorTemperature(kelvin, Dimmer, duration){
-    log("Action - setColorTemp3", "Request CT: ${kelvin} ; Dimmer: ${Dimmer} ; Speed2: ${duration}", 0)
+    log("Action - setColorTemp3", "Request CT: ${kelvin} ; DIMMER: ${Dimmer} ; SPEED2: ${duration}", 0)
     if (duration < 0) duration = 0
     if (duration > 40) duration = 40
     if (duration > 0 ) duration = Math.round(duration * 2)    //Tasmota uses 0.5 second increments so double it for Tasmota Speed value
@@ -1138,7 +1166,7 @@ def setLevel(Dimmer, duration) {
     if (duration > 40) duration = 40
     if (duration > 0 ) duration = Math.round(duration * 2)    //Tasmota uses 0.5 second increments so double it for Tasmota Speed value
     delay = duration * 10 + 5    //Delay is in 1/10 of a second so we make it slightly longer than the actual fade delay.
-	log ("Action - setLevel2", "Request Dimmer: ${Dimmer}% ;  Speed2: ${duration}", 0)
+	log ("Action - setLevel2", "Request Dimmer: ${Dimmer}% ;  SPEED2: ${duration}", 0)
     command = "Rule3 OFF ; Dimmer ${Dimmer} ; SPEED2 ${duration} ; DELAY ${delay} ; Rule3 ON"
 	callTasmota("BACKLOG", command)
 	}
@@ -1163,7 +1191,7 @@ def setHue(float value){
     HEX = hubitat.helper.ColorUtils.rgbToHEX(RGB)
     log ("setHue", "New HEX Color is: ${HEX}", 1)
     
-    //If a dimmer level is set we will preserve it when changing the color.
+	//If a dimmer level is set we will preserve it when changing the color.
     if ( device.currentValue('level') == 100 ) callTasmota("COLOR", HEX )
     else callTasmota("COLOR2", HEX )
 }
@@ -1187,7 +1215,7 @@ def setSaturation(float value){
     HEX = hubitat.helper.ColorUtils.rgbToHEX(RGB)
     log ("setSaturation", "New HEX Color is: ${HEX}", 1)
     
-    //If a dimmer level is set we will preserve it when changing the color.
+	//If a dimmer level is set we will preserve it when changing the color.
     if ( device.currentValue('level') == 100 ) callTasmota("COLOR", HEX )
     else callTasmota("COLOR2", HEX )
 }
@@ -1253,9 +1281,11 @@ def setColor(value) {
         //This is going to appear to Tasmota as a Color change and Tasmota will respond with setting the Dimmer at 100.
         //This change will be reflected automatically in the Hubitat app but may not be picked up by other integration platforms if that was the source of the Color selection.
         }
-        //If a dimmer level is set we will preserve it when changing the color.
+																			   
+		//If a dimmer level is set we will preserve it when changing the color.
         if ( device.currentValue('level') == 100 ) callTasmota("COLOR", desiredColor )
         else callTasmota("COLOR2", desiredColor )
+												 
     }
 
 //Tests whether a given Color is RGB or W and returns true or false plus the cleaned up Color
@@ -1315,7 +1345,7 @@ void tasmotaTelePeriod(String seconds) {
 //Toggles the device state
 void toggle() {
     log("Action", "Toggle ", 0)
-    if (device.currentValue("switch") == "on" ) off()
+    if (device.currentValue("switch1") == "on" ) off()
     else on()
 }
 
@@ -1399,6 +1429,7 @@ def cleanURL(path){
     //And then we can do the rest which also use this symbol
     path = path?.replace("\\","%5C") 
     path = path?.replace(" ","%20") 
+    path = path?.replace('"',"%22") 
     path = path?.replace("#","%23") 
     path = path?.replace("\$","%24") 
     path = path?.replace("+","%2B") 
@@ -1431,4 +1462,3 @@ def remainingTime(){
 //****** STANDARD: End of Supporting functions
 //******
 //*********************************************************************************************************************************************************************
-
