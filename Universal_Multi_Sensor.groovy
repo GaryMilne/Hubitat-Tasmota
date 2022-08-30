@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Universal Multi Sensor with configurable relays
-*  Version: v1.0.0
+*  Version: v1.0.1
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Sensors. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -36,6 +36,7 @@
 *  Version 0.99.4 - Added a sorted sensorAttributes list to provide visual confirmation of mapping between sensors and attributes
 *  Version 0.99.51 - Added support for 2 x relays\switches to the Universal Multi Sensor Code. Linked switch and switch1 attributes together.
 *  Version 1.0.0 - Initial public release.
+*  Version 1.0.1 - Incremented Core 0.98.2.
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -44,7 +45,7 @@
 * Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 * Tasmota Sync Sensor Driver https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Sensor%20Documentation.pdf
 *
-*  Gary Milne - August, 2022
+*  Gary Milne - August 29th, 2022
 *
 **/
 
@@ -129,12 +130,14 @@ sensorType = "All"
 @Field static final mirroredAttributes = ['POWER' : 'energy', 'CURRENT' : 'amperage', 'ECO' : 'carbonMonoxide' , 'ECO2' : 'carbonDioxide' , 'FLOW' : 'rate']
 
 metadata {
-		definition (name: "Tasmota Sync - Universal Multi Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor.groovy", singleThreaded: true )  {
+	  definition (name: "Tasmota Sync - Universal Multi Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor.groovy", singleThreaded: true )  {
+	//definition (name: "Tasmota Sync - Universal Multi Sensor Single Relay", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Single_Relay.groovy", singleThreaded: true )  {
+	//definition (name: "Tasmota Sync - Universal Multi Sensor Double Relay", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Double_Relay.groovy", singleThread
         //capability "LiquidFlowRate"
         //capability "PressureMeasurement"
+        
         capability "Refresh"
         capability "Sensor"
-  
         command "initialize"
         command "tasmotaInjectRule", [[name:"Creates and inserts Rule3 to the Tasmota device. Required for updates to be sent from Tasmota to Hubitat."]]
         command "tasmotaCustomCommand", [ [name:"Enter valid Tasmota command and optional parameter.*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "A single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
@@ -155,9 +158,9 @@ metadata {
         log.info ("SwitchCount is: ${switchCount}")
         //switch1 and switch2 Reserved for power relays
         if (switchCount >= 1) { 
-            capability "Switch"
             attribute "switch", "string"
             attribute "switch1",  "string" 
+            capability "Switch"
             command "on", [[name:"'On' and 'Switch1 On' are the same. Attr switch & switch1 synchronized."]]
             command "off", [[name:"'Off' and 'Switch1 Off' are the same. Attr switch & switch1 synchronized."]]
             command "toggle", [[name:"Note: Reverses the state of switch\\switch1."]]
@@ -785,7 +788,7 @@ def syncTasmota(body){
         //Only changes will get logged so we can report everything. In Tasmota, "power" is the switch state but we use "SWITCHX" in the TSYNC JSON.
         
         if ( switchCount >= 1 ){
-            if (body?.SWITCH1 != '' && body?.SWITCH1 != null) { switch1 = body?.SWITCH1 ; log ("syncTasmota","Switch is: ${switch1}", 2) }
+            if (body?.SWITCH1 != '' && body?.SWITCH1 != null) { switch1 = body?.SWITCH1 ; log ("syncTasmota","Switch is: ${switch1}", 0) }
             if ( switch1.toInteger() == 0 ) { sendEvent(name: "switch1", value: "off", descriptionText: "Switch switch1 was turned off.") ; sendEvent(name: "switch", value: "off", descriptionText: "Linked switch was turned off.") }
             if ( switch1.toInteger() == 1 ) { sendEvent(name: "switch1", value: "on", descriptionText: "Switch switch1 was turned on.") ; sendEvent(name: "switch", value: "on", descriptionText: "Linked switch was turned on.") }
             }
@@ -993,9 +996,9 @@ def statusResponse(body){
        
        //Collate all of the required data regarding a sensor into a single record.
        sensorData.each { item ->
-           log("statusResponse", "Item: ${item}" , 1)
+           log("statusResponse", "Item: ${item}" , 0)
            details = item.tokenize(':')
-           log("statusResponse", "Sensor: ${details[0]}  Type: ${details[1]}  Data: ${details[2]}  Attribute: ${details[3]}" , 2)
+           log("statusResponse", "Sensor: ${details[0]}  Type: ${details[1]}  Data: ${details[2]}  Attribute: ${details[3]}" , 0)
            sensorAttributes.add(details[3].toUpperCase())
           }
        
@@ -1684,7 +1687,9 @@ def setHue(float value){
     HEX = hubitat.helper.ColorUtils.rgbToHEX(RGB)
     log ("setHue", "New HEX Color is: ${HEX}", 1)
     
-    callTasmota("COLOR", HEX )   
+	//If a dimmer level is set we will preserve it when changing the color.
+    if ( device.currentValue('level') == 100 ) callTasmota("COLOR", HEX )
+    else callTasmota("COLOR2", HEX )
 }
 
 def setSaturation(float value){
@@ -1706,7 +1711,9 @@ def setSaturation(float value){
     HEX = hubitat.helper.ColorUtils.rgbToHEX(RGB)
     log ("setSaturation", "New HEX Color is: ${HEX}", 1)
     
-    callTasmota("COLOR", HEX )   
+	//If a dimmer level is set we will preserve it when changing the color.
+    if ( device.currentValue('level') == 100 ) callTasmota("COLOR", HEX )
+    else callTasmota("COLOR2", HEX )
 }
 
 //Extracts the corresponding HSV values for a given HEX color and populates the respective attributes
@@ -1770,7 +1777,11 @@ def setColor(value) {
         //This is going to appear to Tasmota as a Color change and Tasmota will respond with setting the Dimmer at 100.
         //This change will be reflected automatically in the Hubitat app but may not be picked up by other integration platforms if that was the source of the Color selection.
         }
-    	callTasmota("COLOR", desiredColor )   
+																			   
+		//If a dimmer level is set we will preserve it when changing the color.
+        if ( device.currentValue('level') == 100 ) callTasmota("COLOR", desiredColor )
+        else callTasmota("COLOR2", desiredColor )
+												 
     }
 
 //Tests whether a given Color is RGB or W and returns true or false plus the cleaned up Color
@@ -1906,7 +1917,6 @@ def int kelvinToMireds(kelvin){
     }
 
 //Cleans up Tasmota command URL by substituting for illegal characters
-//Note: There is no way to pass a double quotation mark " 
 def cleanURL(path){
     log ("cleanURL", "Fixing path: ${path}", 3)
     //We obviously have to do this one first as it is the % sign. Characters with a leading \ are escaped.
@@ -1914,6 +1924,7 @@ def cleanURL(path){
     //And then we can do the rest which also use this symbol
     path = path?.replace("\\","%5C") 
     path = path?.replace(" ","%20") 
+    path = path?.replace('"',"%22") 
     path = path?.replace("#","%23") 
     path = path?.replace("\$","%24") 
     path = path?.replace("+","%2B") 
@@ -1938,7 +1949,6 @@ def remainingTime(){
     log ("remainingTime", "Remaining time ${remainingTime}", 3)
     return remainingTime  
 }
-
 
 
 //*********************************************************************************************************************************************************************
