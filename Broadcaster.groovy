@@ -324,7 +324,8 @@ void refreshUI(){
         return
     }
     
-    if (state.flags.colorChanged == true && commandText.toLowerCase().contains("color") == true){
+    
+    if (state.flags.colorChanged == true && commandText != null && commandText.toLowerCase().contains("color") == true){
         details = settings.commandText.tokenize(' ')
         app.updateSetting("commandText", details[0] + " ${myColor}")
         log("refreshUI", "New color selected:  ${myColor}", 1)
