@@ -1,7 +1,7 @@
 {
   "packageName": "Tasmota Sync Drivers",
   "author": "Gary J. Milne",
-  "version": "1.2.6",
+  "version": "1.2.61",
   "minimumHEVersion": "2.2.9",
   "dateReleased": "2022-09-09",
   "releaseNotes": "Adds initial release of Tasmota Sync Broadcaster.",
