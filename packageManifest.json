@@ -7,6 +7,24 @@
   "releaseNotes": "Adds initial release of Tasmota Sync Broadcaster.",
   "communityLink": "https://community.hubitat.com/t/tasmota-sync-drivers-native-and-real-time-synchronization-between-hubitat-and-tasmota-11/93651",
   "documentationLink": "https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf",
+  "apps": [
+    {
+      "id": "16c0dc99-87a1-4ac5-99d1-b34ca8e2fd95",
+      "name": "Tasmota Sync Broadcaster",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Broadcaster.groovy",
+      "required": false,
+      "oauth": false,
+      "primary": false,
+      "version": "1.0.0",
+      "categories": [
+        "Integrations"
+      ],
+      "tags": [
+        "Tasmota"
+      ]
+    }
+  ],
   "drivers": [
     {
       "id": "865b186a-f150-4dad-9206-3faa7ceffc65",
@@ -195,24 +213,6 @@
         "Energy",
         "Environmental",
         "Misc Devices"
-      ]
-    }
-  ],
-  "apps": [
-    {
-      "id": "16c0dc99-87a1-4ac5-99d1-b34ca8e2fd95",
-      "name": "Tasmota Sync Broadcaster",
-      "namespace": "garyjmilne",
-      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Broadcaster.groovy",
-      "required": false,
-      "oauth": false,
-      "primary": false,
-      "version": "1.0.0",
-      "categories": [
-        "Integrations"
-      ],
-      "tags": [
-        "Tasmota"
       ]
     }
   ]
