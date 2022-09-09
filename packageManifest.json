@@ -1,10 +1,10 @@
 {
   "packageName": "Tasmota Sync Drivers",
   "author": "Gary J. Milne",
-  "version": "1.2.5",
+  "version": "1.2.6",
   "minimumHEVersion": "2.2.9",
-  "dateReleased": "2022-08-29",
-  "releaseNotes": "Updates to Core code used accross all drivers in preparation for upcoming Tasmota Sync App. Fixes to Dimmer code where applicable. ",
+  "dateReleased": "2022-09-09",
+  "releaseNotes": "Adds initial release of Tasmota Sync Broadcaster.",
   "communityLink": "https://community.hubitat.com/t/tasmota-sync-drivers-native-and-real-time-synchronization-between-hubitat-and-tasmota-11/93651",
   "documentationLink": "https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf",
   "drivers": [
