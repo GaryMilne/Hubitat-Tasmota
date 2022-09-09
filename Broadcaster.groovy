@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Broadcaster
-*  Version: v1.0.0
+*  Version: v1.0.1
 *  Download: See importUrl in definition
 *  Description: An app that utilizes the tasmotaCustomCommand function present in the Tasmota Sync family of drivers to sent a single Tasmota command to multiple Tasmota devices making certain operations much easier.
 *  In addition to simplifying the distribution of commands it is also a reference point for all those commands that you can't quite remember as well as some that you never knew.
@@ -22,8 +22,14 @@
 *
 *  BROADCASTER - CHANGELOG
 *  Version 1.0.0 - Initial Release
+*  Version 1.0.1 - Changed generation of DeviceList and FilterList from frequent to rare events.
+*                - Added some visual logging to show the sending of commands.
+*                - Simplified the logging into 3 levels, 0 = normal, 1 = debug, 2 = verbose.
 *
 *  Gary Milne - September 8th, 2022
+*
+*  Note: I detected some quirky behaviour which I reported here. https://community.hubitat.com/t/bug-report-bug-or-just-known-quirky-behaviour/100620
+*  Essentially any "suspiscious" HTML tags in the text box get replaced with a pseudonymous value, however the programatic text value remains correct. Behaviour noted, doing nothing about it at this point.
 *
 **/
 import groovy.transform.Field
@@ -44,7 +50,7 @@ import groovy.transform.Field
                         "4 = turn power(s) ON and disable further power control, 5 = after a PulseTime period turn power(s) ON (acts as inverted PulseTime mode). |Configuration|No|No|No",
     "Set Led Power state." : "LedPower 0|Control the state of the default status LED. 0 = turn LED OFF and set LedState 0, 1 = turn LED ON and set LedState 8, 2 = toggle LED and set LedState 0, (Use Backlog LedPower 0; SetOption31 1 to disable LED even when Wi-Fi or MQTT is not connected)|Configuration|No|No|No",
     "Set Led Power <X> state." : "LedPower1 0|Control the state of connected to LedLink(i). 0 = turn LED OFF and set LedState 0, 1 = turn LED ON and set LedState 0, 2 = toggle LED and set LedState 0. Enabled only when LedLink(i) is configured.|Configuration|No|No|No",
-    "Enable Fade at power up." : "PowerOnFade 1|0 = don't Fade at startup (default), 0 = don't Fade at startup (default). By default fading is not enabled at boot because of stuttering caused by wi-fi connection. Same as SetOption91. |Bulb|No|No|No",
+    "Enable Fade at power up." : "PowerOnFade 1|0 = don't Fade at startup (default), 1 = Fade at startup. By default fading is not enabled at boot because of stuttering caused by wi-fi connection. Same as SetOption91. |Bulb|No|No|No",
     
     //Rules
     "Enable a Rule." : "Rule1 on|Enables rule1. |Rules|No|No|No",
@@ -174,17 +180,27 @@ preferences {
 }
 
 def mainPage() {
+    //if (state.flags.initialize == null ) initialize()
     if (state.flags == null ) initialize()
     
 	dynamicPage(name: "mainPage", install: true, uninstall: true ) {
 
         //Check the state of the controls to figure out what changed and then refresh the screen
+        isReset()
         isUseListChanged()
         isCommandListChanged()
         isFilterChanged()
         isCommandTextChanged()
         isColorChanged()
+        
+        //Refresh the Device Lists if the user has edited that page.
+        if ( state.flags.isPopulatedDeviceListsChanged == true ) { createDeviceList() }
+        
+        //Refresh the UI based on all of the detected criteria.
         refreshUI()
+        
+        //Show Device Selection Info
+        myDevices = activeList()
         
         section(title: titleise("Step 1 - Select Devices") ){  //Step1
                 //paragraph "<div style='background-color:#000080; height: 0.5px; margin-top:0em; margin-bottom:0em ; border: 0;'></div>"    //Horizontal Line
@@ -194,14 +210,14 @@ def mainPage() {
                 paragraph "<div style='background-color:#FFFFFF; height: 0.5px; margin-top:-1em; margin-bottom:0em ; border: 0;'></div>"    //Horizontal Line
                 
                 //UseList selection
-                input (name: "useList", title: "<b>Select Device List to Use:</b>", type: "enum", options: getLists(), required:false, submitOnChange:true, width:3)
-
+                input (name: "useList", title: "<b>Select Device List to Use:</b>", type: "enum", options: state.DeviceList, required:false, submitOnChange:true, width:3)
+                
                 } //End Step 1
 
         section(title: titleise("Step 2 - Select Commands") ){ //Step 2
                 input (name: "commandListItem", title: "<b>Select Tasmota Command:</b>", type: "enum", options: getCommands(), required:false, submitOnChange:true, width:6, defaultValue: "*** Select a Command ***")
                 //Drop down list of Tasmota command descriptions..    
-                input(name: "filter", title: "<b>Filter by Category:</b>", type: "enum", options: filters(), defaultValue: "All", required:false, submitOnChange:true, width:4)            
+                input(name: "filter", title: "<b>Filter by Category:</b>", type: "enum", options: state.FilterList, defaultValue: "All", required:false, submitOnChange:true, width:4)            
                 
                 paragraph "<div style='color:#17202A;text-align:left; margin-top:0em; font-size:14px'><b>Description:</b> ${state.info.description}</div>"  
                 line = "<div style='color:#17202A;text-align:left; margin-top:-1em; font-size:14px'><b>Reboots Device:</b> ${state.info.reboot}  <b>Network Loss:</b> ${state.info.network}  <b>Browser Refresh Required:</b> ${state.info.refresh}</div>" 
@@ -223,40 +239,90 @@ def mainPage() {
         
         section(title: titleise("Step 3 - Execute Commands") ){ //Step 3
                 //Button to initiate sending command to Tasmota devices.
-                input(name: "runCommand", type: "button", title: "Run Command", backgroundColor: "Green", textColor: "white", submitOnChange: true, width: 3)
-                //paragraph "<div style='background-color:#D5D8DC; height: 1.5px; margin-top:2em; border: 0;'></div>"    //Horizontal Line
+                input(name: "runCommand", type: "button", title: "Run Command", backgroundColor: "Green", textColor: "white", submitOnChange: true, width: 6)
+                input "isShowMore", "bool", title: "Show More", required: false, multiple: false, defaultValue: false, submitOnChange: true, width: 2    
+                input "isDebug", "bool", title: "Debug", required: false, multiple: false, defaultValue: false, submitOnChange: true, width: 2
+                input "isVerbose", "bool", title: "Verbose Debug", required: false, multiple: false, defaultValue: false, submitOnChange: true, width: 2
+                paragraph "<div style='color:#17202A;text-align:left; margin-top:0em; margin-bottom:0em ; font-size:12px'><b>Results:</b><br>${state.results}</div>"
                 }    //End of section
         
         section() { //Debug Area
-                    input "isDebug", "bool", title: "Enable Debug", required: false, multiple: false, defaultValue: false, submitOnChange: true, width: 4
-                    input "isVerbose", "bool", title: "Enable Verbose Logging", required: false, multiple: false, defaultValue: false, submitOnChange: true, width: 4
-                    //input "myColor", "color", title: "Select Color", required: false, submitOnChange: true, width: 4
-                    
-                    if (isDebug == true){
+                    if (isShowMore == true){
                         //Show info regarding control changes
-                        paragraph "<div style='background-color:#000080; height: 0.5px; margin-top:3em; margin-bottom:0em ; font-size:12px'></div>"    //Horizontal Line
-                        //input (name: "logLevel", title: "<b>Logging Level:</b>", type: "enum", options: ["0","1","2","3"], required:false, submitOnChange:true, width:2, defaultValue:1)
+                        paragraph "<div style='background-color:#000080; height: 0.5px; margin-top:0em; margin-bottom:-4em ; font-size:12px'></div>"    //Horizontal Line
                         line = "<div style='color:#17202A;text-align:left; margin-top:0em; margin-bottom:0em ; font-size:12px'><b>useListChanged:</b>${state.flags.useListChanged}    <b>commandListChanged:</b>${state.flags.commandListChanged}    <b>filterChanged:</b>${state.flags.filterChanged}    <b>commandTextChanged:</b>${state.flags.commandTextChanged}    <b>colorChanged:</b>${state.flags.colorChanged}    <b>commandListItem:</b> ${commandListItem}    <br><b>commandText:</b> ${commandText}</div>"
                         line = line.replace("true","<b><font color = 'green'> True</font color = 'black'></b>")
                         line = line.replace("false","<b><font color = 'grey'> False</font color = 'grey'></b>")
                         paragraph line
                         
-                        //Show Device Selection Info
-                        myDevices = activeList()
-                        paragraph "<div style='color:#17202A;text-align:left; margin-top:0em; margin-bottom:0em ; font-size:12px'><b>Selected Devices:</b> ${myDevices}    <b>Quantity:</b> ${state.deviceCount}    <b>Color Selected:</b> ${myColor}    <b>Filter Category:</b> ${filter}</div>"
-                        paragraph "<div style='color:#17202A;text-align:left; margin-top:0em; margin-bottom:0em ; font-size:12px'><b>state.info.reboot:</b> ${state.info.reboot}  <b>state.info.network:</b> ${state.info.network}  <b>state.info.refresh:</b> ${state.info.refresh}    <b>state.info.description:</b> ${state.info.description}</div>" 
-                        paragraph "<b>Tasmota Commands: </b><a href='https://tasmota.github.io/docs/Commands/'>https://tasmota.github.io/docs/Commands/</a>"
+                        
+                        line = "<div style='color:#17202A;text-align:left; margin-top:0em; margin-bottom:0em ; font-size:12px'>"
+                        line = line + "<b>Selected Devices:</b> ${myDevices}    <b>Quantity:</b> ${state.deviceCount}    <b>Color Selected:</b> ${myColor}    <b>Filter Category:</b> ${filter}" + "<br>"
+                        line = line + "<b>state.info.reboot:</b> ${state.info.reboot}  <b>state.info.network:</b> ${state.info.network}  <b>state.info.refresh:</b> ${state.info.refresh}    <b>state.info.description:</b> ${state.info.description}</div>" 
+                        paragraph line
+                                                
+                        //Button to initiate sending command to Tasmota devices.
+                        input(name: "reset", type: "button", title: "Reset", backgroundColor: "Maroon", textColor: "Yellow", submitOnChange: true, width: 3)
+                        //paragraph "<b>Tasmota Commands: </b><a href='https://tasmota.github.io/docs/Commands/'>https://tasmota.github.io/docs/Commands/</a>"
                     }
                 }
+        
+        section() { //Footer
+                   paragraph "<b>Tasmota Commands: </b><a href='https://tasmota.github.io/docs/Commands/'>https://tasmota.github.io/docs/Commands/</a>"
+                  }
         //Mark the execution of the runCommand complete
         state.flags.isRunCommand = false
         }  
 }
 
 
+//************************************************************************************************************************************************************************************************************************
+//************************************************************************************************************************************************************************************************************************
+//************************************************************************************************************************************************************************************************************************
+//**************
+//**************  User Invoked Actions.
+//**************
+//************************************************************************************************************************************************************************************************************************
+//************************************************************************************************************************************************************************************************************************
+//************************************************************************************************************************************************************************************************************************
+
+
+//This is the standard button handler that receives the click of any button control.
+def appButtonHandler(btn) {
+    switch(btn) {
+        case "runCommand":
+            runCommand()
+        break
+        case "reset":
+            state.flags.reset = true
+        break
+    }
+}
+
+
+//Clears everything and starts over.
+def isReset(){
+    if ( state.flags.reset == true ) {
+        log("isReset", "Running a reset", 1)
+        state.info = [description: " ", reboot: " ", network: " ", refresh: " "]
+        state.flags = [filterChanged: false, commandListChanged: false, commandTextChanged: false, useListChanged: false, isRunCommand: false, reset: false]
+        state.results = " "
+        app.updateSetting("commandText" , "None")
+        if ( settings.myColor == null ) app.updateSetting("myColor", "#ffffff")
+        app.updateSetting("useList", [value:null, type:"enum"])  //Works
+        app.updateSetting("filter", [value:"All", type:"enum"])  //Works
+        app.updateSetting("commandListItem", [value:"*** Select a Command ***", type:"enum"])  //Works
+    
+        createDeviceList()
+        createFilterList()
+        }
+    }
+
+
 //We have to split the string into a Command and Parameters to be compatible with the Tasmota Sync Drivers.
 def runCommand(){
     state.flags.isRunCommand = true
+    state.results = " "
     log("runCommand", "Tasmota command is ${commandText}", 1)
     
     if (commandText == null ) {
@@ -264,7 +330,7 @@ def runCommand(){
         return
     }
     
-    if (state.deviceCount <=0 ) {
+    if (state.deviceCount == 0 ) {
         log("runCommand", "The device count is zero. Check you have selected a Device List to use.", 0)
         return
     }
@@ -295,6 +361,7 @@ def runCommand(){
     devs.each { 
         it.tasmotaCustomCommand(command, parameters)
         log("runCommand", "Sent tasmotaCustomCommand('${command}','${parameters}') to device ${it}.", 0)
+        state.results = "Sent tasmotaCustomCommand('${command}','${parameters}') to device ${it}." + "\n" + state.results  
         }
 }
 
@@ -316,7 +383,7 @@ void refreshUI(){
     
     //Handle the filterChanged event. If the filter changes we reset the commandList, the commandText and clear the description fields as we don't have a command selected.
     if (state.flags.filterChanged == true ) {
-        log("refreshUI", "Processing filterChanged UI logic", 3)
+        log("refreshUI", "Processing filterChanged UI logic", 2)
         //Clears the commandText and commandListItem controls.
         app.updateSetting("commandListItem", [value:"*** Select a Command ***", type:"enum"])  //Works
         app.updateSetting("commandText", "")
@@ -335,13 +402,13 @@ void refreshUI(){
     //If the command selected from the commandList has not changed but the commandText has changed then it can only be because of an edit.
     //In that case we do not need to lookup the info and we do not want to clear the description fields so we just exit early.
     if ( state.flags.commandTextChanged == true && state.flags.commandListChanged == false && state.flags.isRunCommand == false) {
-        log("refreshUI", "User has edited the commandText to: '${commandText}'", 0)
+        log("refreshUI", "User has edited the commandText to: '${commandText}'", 1)
         return
     }
 
     //Clear the values if we find nothing in the lookup.
     if (commandListItem == null) {
-        log("refreshUI", "No matching command entry found. commandListItem was null.", 2)
+        log("refreshUI", "No matching command entry found. commandListItem was null.", 1)
         app.updateSetting("commandText", "")
         clearDescription()
         return
@@ -360,12 +427,12 @@ void refreshUI(){
     state.info.network = details[4]
     state.info.refresh = details[5]
     
-    log("refreshUI", "Refresh Complete.", 3)
+    log("refreshUI", "Refresh Complete.", 2)
 }
 
 //This is the device list selection page
 def devicePage() {
-	dynamicPage(name: "devicePage") {
+    dynamicPage(name: "devicePage") {
         section ("<b>Populate Tasmota Device Lists</b>") {
             input "devices0", "capability.*", title: "All Tasmota Devices" , multiple: true, required: false, defaultValue: null
 		    input "devices1", "capability.bulb", title: "Tasmota Bulbs" , multiple: true, required: false, defaultValue: null
@@ -378,10 +445,11 @@ def devicePage() {
             input "devices8", "capability.*", title: "Single Device" , multiple: false, required: false, defaultValue: null
             paragraph "<div style='color:#17202A;text-align:left; margin-top:0em; font-size:12px'><b>You can use these device list to target specific types of devices for given commands. The Custom Device List is nominally for Ad-Hoc selections.</b></div>"  //Line with Description of the selected command.
             //input "devices", "device.", title: "Tasmota Devices" , multiple: true, required: true, defaultValue: null
-            //Declaring devices here makes it App global and can be accessed later.
-            //devices = devices0
+            state.flags.isPopulatedDeviceListsChanged = true
 		}
 	}
+    //Set the flag to getDeviceLists in case we have made changes on this page.
+    
 }
 
 //Set the titles to a consistent style.
@@ -422,21 +490,12 @@ def getSelectOk()
 	status << [all: status.devicePage]
 }
 
-//This is the standard button handler that receives the click of any button control.
-def appButtonHandler(btn) {
-    switch(btn) {
-        case "runCommand":
-            runCommand()
-        break
-    }
-}
 
 //Log status messages
 private log(name, message, int loglevel){
     threshold = 0
     if ( isDebug == true ) threshold = 1
     if ( isVerbose == true ) threshold = 2
-    if ( isDebug == true && isVerbose == true ) threshold = 3
     
     //This is a quick way to filter out messages based on loglevel
 	if ( loglevel > threshold) {return}
@@ -450,27 +509,11 @@ private log(name, message, int loglevel){
 //************************************************************************************************************************************************************************************************************************
 //************************************************************************************************************************************************************************************************************************
 //**************
-//**************  List Generation.
+//**************  Dynamic List Generation.
 //**************
 //************************************************************************************************************************************************************************************************************************
 //************************************************************************************************************************************************************************************************************************
 //************************************************************************************************************************************************************************************************************************
-
-//Returns a list of device lists that are populated with at least on device.
-def getLists(){
-    log("getLists", "Preparing list of populated device lists.", 3)
-    def list = []
-    if ( devices0 != null && devices0.size() > 0 ) list.add("All Tasmota Devices")
-    if ( devices1 != null && devices1.size() > 0 ) list.add("Tasmota Bulbs")
-    if ( devices2 != null && devices2.size() > 0 ) list.add("Tasmota Plugs")
-    if ( devices3 != null && devices3.size() > 0 ) list.add("Tasmota Switches")
-    if ( devices4 != null && devices4.size() > 0 ) list.add("Tasmota Fans")
-    if ( devices5 != null && devices5.size() > 0 ) list.add("Tasmota Power Meters")
-    if ( devices6 != null && devices6.size() > 0 ) list.add("Tasmota Sensor Devices")
-    if ( devices7 != null && devices7.size() > 0 ) list.add("Custom Device List")
-    if ( devices8 != null ) list.add("Single Device")
-    return list
-}
 
 
 //Returns the Active Device List based on the user selection.
@@ -486,29 +529,13 @@ def activeList(){
     if (useList == "Single Device") devices = devices8
 
     state.deviceCount = itemCount(devices)
-    log("activeList", "Selected Device List is: ${devices.toString()}", 3)
+    log("activeList", "Selected Device List is: ${devices.toString()}", 1)
     return devices
 }
 
 
-//Returns a list of unique Categories that are extracted from the commandMap.  These categories can be used to filter the command list.
-def filters(){
-    def myfilter = []
-    myfilter.add("All")
-    //Note: There is no way to exit an each loop before it has run to completion. Not an issue when the lists are small.
-    commandMap.each{
-        key = it.key.toString()
-        value = it.value.toString()
-        details = value.tokenize('|')
-        //details[0] is the Tasmota command, details[1] is the info description, details[2] is the category, details[3] is reboot, details[4] is network, details[5] is refresh 
-        categories = details[2].tokenize(',')
-        categories.each { myfilter.add (it) }
-        }
-    log("filters", "Filters List is: ${myfilter.unique().sort().toString()}", 3)
-    return myfilter.unique().sort()
-}
 
-//Returns a list of commands that is usable by the drop down control. A filter is applied if requested.
+//Returns a list of commands that is usable by the drop down control. A filter is applied when one is selected selected.
 def getCommands(){
     //Note: There is no way to exit an each loop before it has run to completion. Not an issue when the lists are small.
     def commandList = []
@@ -525,7 +552,7 @@ def getCommands(){
             }
         }
     }
-    log("getCommands", "commandList is: ${return commandList.unique().sort()}", 3)
+    log("getCommands", "commandList is: ${return commandList.unique().sort()}", 2)
     return commandList.unique().sort()
 }
 
@@ -548,7 +575,6 @@ def isFilterChanged(){
         state.filterHistory.old = state.filterHistory.new
         state.filterHistory.new = settings.filter
         state.flags.filterChanged = true
-        log("isFilterChanged", "Filter changed to: ${settings.filter}", 1)
     }
     else state.flags.filterChanged = false
 }
@@ -559,7 +585,6 @@ def isCommandListChanged(){
         state.commandListHistory.old = state.commandListHistory.new
         state.commandListHistory.new = settings.commandListItem
         state.flags.commandListChanged = true
-        log("isCommandListChanged", "Command Selected is: ${settings.commandListItem}", 1)
     } 
     else state.flags.commandListChanged = false
 }
@@ -580,7 +605,6 @@ def isUseListChanged(){
         state.useListHistory.old = state.useListHistory.new
         state.useListHistory.new = settings.useList
         state.flags.useListChanged = true
-        log("isUseListChanged", "Selected Device List Changed to : ${settings.useList}", 1)
     }
     else state.flags.useListChanged = false
 }
@@ -591,7 +615,6 @@ def isColorChanged(){
         state.colorHistory.old = state.colorHistory.new
         state.colorHistory.new = settings.myColor
         state.flags.colorChanged = true
-        log("isColorChanged", "Selected Color to : ${settings.myColor}", 1)
     }
     else state.flags.colorChanged = false
 }
@@ -630,13 +653,17 @@ void updated() {
 void initialize() {
     log.info "Running Initialize."        
     state.info = [description: " ", reboot: " ", network: " ", refresh: " "]
-    state.flags = [filterChanged: false, commandListChanged: false, commandTextChanged: false, useListChanged: false, isRunCommand: false]
-    state.commandTextHistory = [new: "seed", old: ""]
-    state.filterHistory = [new: "seed", old: ""]
-    state.commandListHistory = [new: "seed", old: ""]
-    state.useListHistory = [new: "seed", old: ""]
-    state.colorHistory = [new: "seed", old: ""]
+    state.flags = [filterChanged: false, commandListChanged: false, commandTextChanged: false, useListChanged: false, isRunCommand: false, isPopulatedDeviceListsChanged: false]
+    state.commandTextHistory = [new: "seed1", old: "seed"]
+    state.filterHistory = [new: "seed1", old: "seed"]
+    state.commandListHistory = [new: "seed1", old: "seed"]
+    state.useListHistory = [new: "seed1", old: "seed"]
+    state.colorHistory = [new: "seed1", old: "seed"]
     state.deviceCount = 0
+    state.results = " "
+    
+    createDeviceList()
+    createFilterList()
     
 //	app.clearSetting("debugOutput")	// app.updateSetting() only updates, won't create.
 
@@ -650,4 +677,44 @@ def setDebug(dbg, inf) {
 	if (descTextEnable) log.info "debugOutput: $debugOutput, descTextEnable: $descTextEnable"
 }
 
+
+//Returns a list of device lists that are populated with at least one device.
+//This gets updated everytime from the Device selection dynamic page.
+def createDeviceList(){
+    
+        log("createDeviceList", "Preparing list of populated device lists.", 1)
+        def list = []
+        if ( devices0 != null && devices0.size() > 0 ) list.add("All Tasmota Devices")
+        if ( devices1 != null && devices1.size() > 0 ) list.add("Tasmota Bulbs")
+        if ( devices2 != null && devices2.size() > 0 ) list.add("Tasmota Plugs")
+        if ( devices3 != null && devices3.size() > 0 ) list.add("Tasmota Switches")
+        if ( devices4 != null && devices4.size() > 0 ) list.add("Tasmota Fans")
+        if ( devices5 != null && devices5.size() > 0 ) list.add("Tasmota Power Meters")
+        if ( devices6 != null && devices6.size() > 0 ) list.add("Tasmota Sensor Devices")
+        if ( devices7 != null && devices7.size() > 0 ) list.add("Custom Device List")
+        if ( devices8 != null ) list.add("Single Device")
+        state.flags.isPopulatedDeviceListsChanged == false
+        state.DeviceList = list
+       
+    }
+
+
+//Returns a list of unique Categories that are extracted from the commandMap.  These categories can be used to filter the command list.
+//This gets updated when called from Initialize() or reset()
+def createFilterList(){
+    log("createFilterList", "Preparing list of available filters.", 1)
+    def myfilter = []
+    myfilter.add("All")
+    //Note: There is no way to exit an each loop before it has run to completion. Not an issue when the lists are small.
+    commandMap.each{
+        key = it.key.toString()
+        value = it.value.toString()
+        details = value.tokenize('|')
+        //details[0] is the Tasmota command, details[1] is the info description, details[2] is the category, details[3] is reboot, details[4] is network, details[5] is refresh 
+        categories = details[2].tokenize(',')
+        categories.each { myfilter.add (it) }
+        }
+    log("filters", "Filters List is: ${myfilter.unique().sort().toString()}", 2)
+    state.FilterList = myfilter.unique().sort()
+}
 
