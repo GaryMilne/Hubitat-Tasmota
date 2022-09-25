@@ -1,10 +1,10 @@
 {
   "packageName": "Tasmota Sync Drivers",
   "author": "Gary J. Milne",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "minimumHEVersion": "2.2.9",
-  "dateReleased": "2022-09-09",
-  "releaseNotes": "Adds initial release of Tasmota Sync Broadcaster",
+  "dateReleased": "2022-25-09",
+  "releaseNotes": "Bug fixes and improvements on Tasmota Sync Broadcaster",
   "communityLink": "https://community.hubitat.com/t/tasmota-sync-drivers-native-and-real-time-synchronization-between-hubitat-and-tasmota-11/93651",
   "documentationLink": "https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf",
   "apps": [
@@ -16,7 +16,7 @@
       "required": false,
       "oauth": false,
       "primary": false,
-      "version": "1.0.1",
+      "version": "1.1.4",
       "categories": [
         "Integrations"
       ],
