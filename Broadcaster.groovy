@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Broadcaster
-*  Version: v1.0.1
+*  Version: v1.1.4
 *  Download: See importUrl in definition
 *  Description: An app that utilizes the tasmotaCustomCommand function present in the Tasmota Sync family of drivers to sent a single Tasmota command to multiple Tasmota devices making certain operations much easier.
 *  In addition to simplifying the distribution of commands it is also a reference point for all those commands that you can't quite remember as well as some that you never knew.
@@ -25,14 +25,22 @@
 *  Version 1.0.1 - Changed generation of DeviceList and FilterList from frequent to rare events.
 *                - Added some visual logging to show the sending of commands.
 *                - Simplified the logging into 3 levels, 0 = normal, 1 = debug, 2 = verbose.
+* Version 1.0.2  - Additions to the list of commands.
+* Version 1.1.0  - Rework of interface and interaction with commandText field.  Added preview of sample command with option to copy it to the commandText field.  Other than color change this is the only interaction with the commandText field.
+*                - Remove the sue of some flags pertaining to whether the commandText field had been changed which was used to moderate between menu item selection and user editing of said field.
+* Version 1.1.1  - Added the ability to customize the titles of the device lists.
+* Version 1.1.2  - Added a device exclusion list. Added ability to clear results field. Improved colors for a more harmonious look.
+* Version 1.1.3  - Added a Tasmota Sync Filter and a few sample commands.
 *
-*  Gary Milne - September 8th, 2022
+*  Gary Milne - September 24th, 2022
 *
 *  Note: I detected some quirky behaviour which I reported here. https://community.hubitat.com/t/bug-report-bug-or-just-known-quirky-behaviour/100620
 *  Essentially any "suspiscious" HTML tags in the text box get replaced with a pseudonymous value, however the programatic text value remains correct. Behaviour noted, doing nothing about it at this point.
 *
 **/
 import groovy.transform.Field
+
+@Field static final deviceListTitles = [0:"All Tasmota Devices", 1:"Tasmota Bulbs", 2:"Tasmota Plugs", 3:"Tasmota Switches", 4:"Tasmota Fans", 5:"Tasmota Power Meters", 6:"Tasmota Sensor Devices", 7:"Custom Device List #1", 8:"Custom Device List #2", 9:"Single Device", 10:"Excluded Devices"]
 
 @Field static final commandMap = [
     //Each record looks like this "Short description" : "Tasmota Command|Long Description|Category1,Category2...|Reboot|WiFi|Refresh",
@@ -61,10 +69,14 @@ import groovy.transform.Field
     "Reset the color of a bulb at power up." : "Rule1 ON power1#boot DO color 000000FF60 ENDON|Resets the color of a bulb to a default value on power up. <b>You must enable the rule with 'rule1 on'.</b> |Rules,Bulb|No|No|No",
     "Turn a switch back on if it is turned off." : "rule1 ON Power1#state=0 do Backlog Delay 10; Power1 1 ENDON|Turns a relay back on after a 10 second delay. Remember to activate the rule with 'rule1 on'.|Rules|No|No|No",
     "Turn a switch back on X seconds after it has been turned off." : "rule1 ON Power1#state=0 do Backlog Delay 60; Power1 1 ENDON|Turns a relay back on after a 60 second delay. Remember to activate the rule with 'rule1 on'.|Rules|No|No|No",
-    "Turn a switch off X seconds after it has been turned on" : "rule1 ON Power1#state=1 do Backlog Delay 60; Power1 0 ENDON|Turns a relay back off after a 60 second delay. Remember to activate the rule with 'rule1 on'.|Rules|No|No|No",
+    "Turn a switch off X seconds after it has been turned on" : "rule1 ON Power1#state=1 do Backlog Delay 60; Power1 0 ENDON|Turns a relay back off after a 60 second delay. Remember to activate the rule with 'rule1 on'. See also 'Pulsetime' command.|Rules|No|No|No",
     "Keep the power state of two devices in sync." : "rule1 ON Power1#state DO WebSend [192.168.0.120] POWER1 %value% ENDON.|Sets the power state on device B to match the power state to device A bypassing Hubitat. Remember to activate the rule with 'rule1 on'.|Rules|No|No|No",
     "Change TelePeriod based on Power" : "backlog ; rule1 on ; rule1 5 ; rule1 ON ENERGY#Power<5 do TelePeriod 60 ENDON ON ENERGY#Power>10 do TelePeriod 10 ENDON|Changes the TelePeriod of a device automatically based upon it's power consumption. In this example the rule is enabled and uses OneShot detection.|Rules|No|No|No",
-    "Change TelePeriod based on Temperature" : "backlog ; rule1 on ; rule1 5 ; rule1 ON DS18B20-1#Temperature > 80 do TelePeriod 10 ENDON ON DS18B20-1#Temperature < 80 do TelePeriod 60 ENDON|Changes the TelePeriod of a device automatically based upon it's temperature. In this example the rule is enabled and uses OneShot detection.|Rules|No|No|No",
+    "Change TelePeriod based on Temperature" : "backlog ; rule1 on ; rule1 5 ; rule1 ON DS18B20-1#Temperature>80 do TelePeriod 10 ENDON ON DS18B20-1#Temperature<80 do TelePeriod 60 ENDON|Changes the TelePeriod of a device automatically based upon it's temperature. In this example the rule is enabled and uses OneShot detection.|Rules|No|No|No",
+    
+    //Tasmota Sync
+    "Notify Hubitat Immediately on Temperature Threshold Exceeded" : "backlog rule2 ON DS18B20-1#Temperature>90 do webquery http://192.168.0.201:39501/ POST {'TSync':'True','Temperature':'%value%'} ENDON ; rule2 5 ; rule2 on|Uses Tasmota Sync packet to notify Hubitat immediately on exceeding threshold and avoids waiting for TELEPERIOD to execute. Change the IP address and sensor name for your system.|Tasmota Sync,Rules|No|No|No",
+    "Notify Hubitat Immediately on Power Threshold Exceeded" : "backlog rule2 ON ENERGY#Power>100 do webquery http://192.168.0.201:39501/ POST {'TSync':'True','SWITCH1':'1','POWER':'%value%'} ENDON ; rule2 5 ; rule2 on|Uses Tasmota Sync packet to notify Hubitat immediately on exceeding threshold and avoids waiting for TELEPERIOD to execute. Change the IP address and sensor name for your system.|Tasmota Sync,Rules|No|No|No",
         
     //Tasmota Upgrade
     "*Configure Over The Air Upgrade location for Standard Version." : "OtaUrl http://ota.tasmota.com/tasmota/release/tasmota.bin.gz|<b>Standard Version:</b> Sets the OTAURL on the Tasmota device for over the air upgrades. Upgrades initiated by <b>Upgrade 1</b>. |Tasmota Upgrade|No|No|No",
@@ -77,7 +89,7 @@ import groovy.transform.Field
     "Configure OTA compatibility check." : "SetOption78 0|OTA compatibility check, 0 = enabled (default), 1 = disabled. |Tasmota Upgrade|No|No|No",
     
     //WiFi
-    "Configure WiFi SSID and Password." : "Backlog SSID1 <myssid>; Password1 <mypassword>; SSID2 <myssid2>; Password2 <mypassword2>|Sets the primary and secondary WiFi SSID and password. Edit command to match your environment. <b>Be careful, incorrect use may render your device unable to connect to the network.</b>|WiFi|Yes|Yes|No",
+    "Configure WiFi SSID and Password." : "Backlog SSID1 myssid; Password1 mypassword; SSID2 myssid2; Password2 mypassword2|Sets the primary and secondary WiFi SSID and password. Edit command to match your environment. <b>Be careful, incorrect use may render your device unable to connect to the network.</b>|WiFi|Yes|Yes|No",
     "Switch WiFi Access Point." : "AP 0|0 = switch to other Wi-Fi Access Point, 1 = select Wi-Fi Access Point 1, 2 = select Wi-Fi Access Point 2. |WiFi|No|Yes|No",
     "Configure WiFi LED Status." : "SetOption31 0|Set status LED blinking during Wi-Fi and MQTT connection problems. LedPower must be set to 0 for this feature to work. 0 = Enabled (default), 1 = Disabled.|WiFi|No|No|No",
     "WiFi Network Scan." : "SetOption56 1|Wi-Fi network scan to select strongest signal on restart (network has to be visible), 0 = disable (default), 1 = enable.|WiFi|No|No|No",
@@ -119,6 +131,7 @@ import groovy.transform.Field
     "Set Wattage resolution." : "WattRes 3|Wattage resolution. 0..3 = maximum number of decimal places|Energy|No|No|No",
     "Energy Monitoring when power off." : "SetOption21 1|Energy monitoring when power is off, 0 = disable (default), 1 = enable.|Energy|No|No|No",
     "Over Power Time Limit." : "SetOption33 5|Number of seconds for which the maximum power limit can be exceeded before the power is turned off, 1..250 = set number of seconds (default = 5)|Energy|No|No|No",
+    "Automatic Off after Period." : "Pulsetime 600|Turns off a switch X 1/10s of a second after it has been turned on. Pulsetime turns on the first relay, additional relays addressed as PulsetimeX. PulsetimeX 0 to disable Pulsetime on a relay.|Common,Configuration,Energy|No|No|No",
                   
     //Web UI
     "Change label on a WebUI button." : "WebButton1 Pump 1|Changes the default label on the Tasmota WebUI for Relay1 from 1 to Pump 1. Especially usefully when you have a device with a large number of relays like a sprinkler controller example:<b>WebButton4 Front Lawn</b>.|Web UI|No|No|Yes",
@@ -182,15 +195,14 @@ preferences {
 def mainPage() {
     //if (state.flags.initialize == null ) initialize()
     if (state.flags == null ) initialize()
+    //initialize()
     
 	dynamicPage(name: "mainPage", install: true, uninstall: true ) {
 
         //Check the state of the controls to figure out what changed and then refresh the screen
         isReset()
-        isUseListChanged()
         isCommandListChanged()
         isFilterChanged()
-        isCommandTextChanged()
         isColorChanged()
         
         //Refresh the Device Lists if the user has edited that page.
@@ -211,65 +223,65 @@ def mainPage() {
                 
                 //UseList selection
                 input (name: "useList", title: "<b>Select Device List to Use:</b>", type: "enum", options: state.DeviceList, required:false, submitOnChange:true, width:3)
-                
                 } //End Step 1
 
         section(title: titleise("Step 2 - Select Commands") ){ //Step 2
+                input(name: "filter", title: "<b>Select Category:</b>", type: "enum", options: state.FilterList, defaultValue: "All", required:false, submitOnChange:true, width:2)            
                 input (name: "commandListItem", title: "<b>Select Tasmota Command:</b>", type: "enum", options: getCommands(), required:false, submitOnChange:true, width:6, defaultValue: "*** Select a Command ***")
                 //Drop down list of Tasmota command descriptions..    
-                input(name: "filter", title: "<b>Filter by Category:</b>", type: "enum", options: state.FilterList, defaultValue: "All", required:false, submitOnChange:true, width:4)            
                 
                 paragraph "<div style='color:#17202A;text-align:left; margin-top:0em; font-size:14px'><b>Description:</b> ${state.info.description}</div>"  
                 line = "<div style='color:#17202A;text-align:left; margin-top:-1em; font-size:14px'><b>Reboots Device:</b> ${state.info.reboot}  <b>Network Loss:</b> ${state.info.network}  <b>Browser Refresh Required:</b> ${state.info.refresh}</div>" 
                 line = line.replace("Yes","<b><font color = 'red'>Yes</font color = 'black'></b>")
                 paragraph line
-
+                line = "<div style='color:#17202A;text-align:left; margin-top:-1em; font-size:16px'><b>Sample Command:</b> <b><font color = '#27ae61'>${state.info.sampleCommand}</font color = 'black'></b> </div>"                 
+                paragraph line
+            
+                input(name: "copyCommand", type: "button", title: "Copy Sample", backgroundColor: "#1962d7", textColor: "white", submitOnChange: true, width: 6)
+                
                 //OR statement.
-                paragraph "<div style='color:#0000FF;text-align:left; margin-top:0em; margin-bottom:0em; font-size:16px'><b> - OR - </b></div>"
+                paragraph "<div style='color:#1962d7;text-align:left; margin-top:0em; margin-bottom:0em; font-size:16px'><b> - OR - </b></div>"
                 
                 //commandText box which is what gets executed           
-                input("commandText", "text", title:"<b>Enter\\Edit Tasmota command line:</b> (<b>Tab or Enter</b> to save changes after edit.).", description: "", required: false, submitOnChange: true, width: 8)
+                input("commandText", "text", title:"<b>Enter\\Edit Tasmota command line:</b> (<b>Tab or Enter</b> to save changes after edit.).", description: "", required: false, submitOnChange: true, width: 12)
             
                 //Show the color picker if the filter is set to webUI.
-                if (filter == "Web UI") {
-                    input "myColor", "color", title: "<b>Selected Color: ${myColor}</b>", required: false, submitOnChange: true, width: 2, defaultValue: '#ffffff'
+                if (showColorControl()) {
+                    input "myColor", "color", title: "<b>Select Color: ${myColor}</b>", required: false, submitOnChange: true, width: 2, defaultValue: '#ffffff'
                     }
-                }
+                } //End Section 2
 
-        
         section(title: titleise("Step 3 - Execute Commands") ){ //Step 3
                 //Button to initiate sending command to Tasmota devices.
-                input(name: "runCommand", type: "button", title: "Run Command", backgroundColor: "Green", textColor: "white", submitOnChange: true, width: 6)
+                input(name: "runCommand", type: "button", title: "Run Command", backgroundColor: "#27ae61", textColor: "white", submitOnChange: true, width: 6)
                 input "isShowMore", "bool", title: "Show More", required: false, multiple: false, defaultValue: false, submitOnChange: true, width: 2    
                 input "isDebug", "bool", title: "Debug", required: false, multiple: false, defaultValue: false, submitOnChange: true, width: 2
                 input "isVerbose", "bool", title: "Verbose Debug", required: false, multiple: false, defaultValue: false, submitOnChange: true, width: 2
+            
                 paragraph "<div style='color:#17202A;text-align:left; margin-top:0em; margin-bottom:0em ; font-size:12px'><b>Results:</b><br>${state.results}</div>"
+                if ( state.results != "" ) input(name: "clearResults", type: "button", title: "Clear Results", backgroundColor: "#1962d7", textColor: "white", submitOnChange: true, width: 2)
+            	
+                if (isShowMore == true){
+				//Show info regarding control changes
+				    paragraph "<div style='background-color:#000080; height: 0.5px; margin-top:0em; margin-bottom:-4em ; font-size:12px'></div>"    //Horizontal Line
+				    line = "<div style='color:#17202A;text-align:left; margin-top:0em; margin-bottom:0em ; font-size:12px'><b>filterChanged:</b>${state.flags.filterChanged}    <b>commandListChanged:</b>${state.flags.commandListChanged}    <b>colorChanged:</b>${state.flags.colorChanged}    <b>Filter Category:</b> ${filter}    <b>commandListItem:</b> ${commandListItem}   <b>Color Selected:</b> ${myColor}  <br><b>commandText:</b> ${commandText}</div>"
+				    line = line.replace("true","<b><font color = 'green'> True</font color = 'black'></b>")
+				    line = line.replace("false","<b><font color = 'grey'> False</font color = 'grey'></b>")
+				    paragraph line
+                    
+				    line = "<div style='color:#17202A;text-align:left; margin-top:0em; margin-bottom:1em ; font-size:12px'>"
+                    //Show Excluded devices if there are any.
+				    line = line + "<b>Selected Devices:</b> ${myDevices}    <b>Quantity:</b> ${state.deviceCount}<br>"
+                    if (devices10 != null) line = line + "<b>Excluded Devices:</b> ${devices10}    <b>Quantity:</b> ${state.excludedDeviceCount}<br>"
+				    line = line + "</div>" 
+				    paragraph line
+										
+				    //Button to initiate sending command to Tasmota devices.
+				    input(name: "reset", type: "button", title: "Reset", backgroundColor: "Maroon", textColor: "Yellow", submitOnChange: true, width: 3)
+                    paragraph "<b>Tasmota Commands: </b><a href='https://tasmota.github.io/docs/Commands/'>https://tasmota.github.io/docs/Commands/</a>"
+			        }
                 }    //End of section
-        
-        section() { //Debug Area
-                    if (isShowMore == true){
-                        //Show info regarding control changes
-                        paragraph "<div style='background-color:#000080; height: 0.5px; margin-top:0em; margin-bottom:-4em ; font-size:12px'></div>"    //Horizontal Line
-                        line = "<div style='color:#17202A;text-align:left; margin-top:0em; margin-bottom:0em ; font-size:12px'><b>useListChanged:</b>${state.flags.useListChanged}    <b>commandListChanged:</b>${state.flags.commandListChanged}    <b>filterChanged:</b>${state.flags.filterChanged}    <b>commandTextChanged:</b>${state.flags.commandTextChanged}    <b>colorChanged:</b>${state.flags.colorChanged}    <b>commandListItem:</b> ${commandListItem}    <br><b>commandText:</b> ${commandText}</div>"
-                        line = line.replace("true","<b><font color = 'green'> True</font color = 'black'></b>")
-                        line = line.replace("false","<b><font color = 'grey'> False</font color = 'grey'></b>")
-                        paragraph line
-                        
-                        
-                        line = "<div style='color:#17202A;text-align:left; margin-top:0em; margin-bottom:0em ; font-size:12px'>"
-                        line = line + "<b>Selected Devices:</b> ${myDevices}    <b>Quantity:</b> ${state.deviceCount}    <b>Color Selected:</b> ${myColor}    <b>Filter Category:</b> ${filter}" + "<br>"
-                        line = line + "<b>state.info.reboot:</b> ${state.info.reboot}  <b>state.info.network:</b> ${state.info.network}  <b>state.info.refresh:</b> ${state.info.refresh}    <b>state.info.description:</b> ${state.info.description}</div>" 
-                        paragraph line
-                                                
-                        //Button to initiate sending command to Tasmota devices.
-                        input(name: "reset", type: "button", title: "Reset", backgroundColor: "Maroon", textColor: "Yellow", submitOnChange: true, width: 3)
-                        //paragraph "<b>Tasmota Commands: </b><a href='https://tasmota.github.io/docs/Commands/'>https://tasmota.github.io/docs/Commands/</a>"
-                    }
-                }
-        
-        section() { //Footer
-                   paragraph "<b>Tasmota Commands: </b><a href='https://tasmota.github.io/docs/Commands/'>https://tasmota.github.io/docs/Commands/</a>"
-                  }
+
         //Mark the execution of the runCommand complete
         state.flags.isRunCommand = false
         }  
@@ -286,6 +298,15 @@ def mainPage() {
 //************************************************************************************************************************************************************************************************************************
 //************************************************************************************************************************************************************************************************************************
 
+//Determines whether or not to show the Color control on the screen.
+def showColorControl(){
+    if (commandText.toLowerCase().contains("color") == true){ 
+        return true 
+    }
+    else {
+        return false
+    }
+}
 
 //This is the standard button handler that receives the click of any button control.
 def appButtonHandler(btn) {
@@ -293,19 +314,24 @@ def appButtonHandler(btn) {
         case "runCommand":
             runCommand()
         break
+        case "copyCommand":
+            state.flags.isCopyCommand = true
+        break
+        case "clearResults":
+            state.results = ""
+        break
         case "reset":
             state.flags.reset = true
         break
     }
 }
 
-
 //Clears everything and starts over.
 def isReset(){
     if ( state.flags.reset == true ) {
         log("isReset", "Running a reset", 1)
         state.info = [description: " ", reboot: " ", network: " ", refresh: " "]
-        state.flags = [filterChanged: false, commandListChanged: false, commandTextChanged: false, useListChanged: false, isRunCommand: false, reset: false]
+        state.flags = [filterChanged: false, commandListChanged: false, isRunCommand: false, reset: false]
         state.results = " "
         app.updateSetting("commandText" , "None")
         if ( settings.myColor == null ) app.updateSetting("myColor", "#ffffff")
@@ -335,11 +361,19 @@ def runCommand(){
         return
     }
     
-    newCommandText = commandText.replace("'","\"") 
-    spacePos = commandText.indexOf(" ")
-    length = commandText.length()
+    //If the command contains the phrase TSync then we know if must contain single quoted data and thus single quotes cannot be replaced.
+    //In all other circumstances single quotes are replaced with double quotes. So disabling a rule will convert rule '' to rule "" which is the correct syntax.
+    if (commandText.contains("TSync") == false ){
+        newCommandText = commandText.replace("'","\"") 
+        }
+    else { 
+        newCommandText = commandText 
+        }
     
+    //Now seperate out the command from the parameters.
     try {
+        spacePos = commandText.indexOf(" ")
+        length = commandText.length()    
         command = newCommandText.substring(0, spacePos).trim()
         parameters = newCommandText.substring(spacePos).trim()        
         paramLen = parameters.trim().length() 
@@ -349,8 +383,7 @@ def runCommand(){
         }
         
     catch (Exception e) {
-            log("runCommand", "Exception $e in runCommand", 0)
-            log.debug 
+        log("runCommand", "Exception ${e} in runCommand", 0)
         }
     
     data = newCommandText.tokenize(' ')
@@ -358,10 +391,21 @@ def runCommand(){
     devs = activeList()
     log("runCommand", "Selected devices: ${devs}", 1)
     
+    //Convert the exclusion list to a string to make it easier to work with.
+    exclusionList = devices10.toString()
+    
+    //Now go through all of the devices one by one
     devs.each { 
-        it.tasmotaCustomCommand(command, parameters)
-        log("runCommand", "Sent tasmotaCustomCommand('${command}','${parameters}') to device ${it}.", 0)
-        state.results = "Sent tasmotaCustomCommand('${command}','${parameters}') to device ${it}." + "\n" + state.results  
+        //Check to see if it's in the exclusion list.
+        if ( exclusionList.contains("${it}") == true ) {
+            log("runCommand", "Device '${it}' is in the exclusion list and will be ignored.", 0)
+            state.results = "Device '${it}' is in the exclusion list and has been ignored." + "\n" + state.results  
+            }
+        else {
+            it.tasmotaCustomCommand(command, parameters)
+            log("runCommand", "Sent tasmotaCustomCommand('${command}','${parameters}') to device '${it}'.", 0)
+            state.results = "Sent tasmotaCustomCommand('${command}','${parameters}') to device '${it}'." + "\n" + state.results  
+            }
         }
 }
 
@@ -381,17 +425,16 @@ void refreshUI(){
     
     log("refreshUI", "Initiated Refresh.", 2)
     
-    //Handle the filterChanged event. If the filter changes we reset the commandList, the commandText and clear the description fields as we don't have a command selected.
+    //Handle the filterChanged event. If the filter changes we reset the commandList and clear the description fields as we don't have a command selected.
     if (state.flags.filterChanged == true ) {
         log("refreshUI", "Processing filterChanged UI logic", 2)
-        //Clears the commandText and commandListItem controls.
+        //Clears the commandListItem controls.
         app.updateSetting("commandListItem", [value:"*** Select a Command ***", type:"enum"])  //Works
-        app.updateSetting("commandText", "")
         clearDescription()
         return
     }
     
-    
+    //If the color changes then adjust the content of the commandText to incorporate the new color.
     if (state.flags.colorChanged == true && commandText != null && commandText.toLowerCase().contains("color") == true){
         details = settings.commandText.tokenize(' ')
         app.updateSetting("commandText", details[0] + " ${myColor}")
@@ -399,17 +442,9 @@ void refreshUI(){
         return
     }
     
-    //If the command selected from the commandList has not changed but the commandText has changed then it can only be because of an edit.
-    //In that case we do not need to lookup the info and we do not want to clear the description fields so we just exit early.
-    if ( state.flags.commandTextChanged == true && state.flags.commandListChanged == false && state.flags.isRunCommand == false) {
-        log("refreshUI", "User has edited the commandText to: '${commandText}'", 1)
-        return
-    }
-
     //Clear the values if we find nothing in the lookup.
     if (commandListItem == null) {
         log("refreshUI", "No matching command entry found. commandListItem was null.", 1)
-        app.updateSetting("commandText", "")
         clearDescription()
         return
     }
@@ -420,12 +455,20 @@ void refreshUI(){
             
     //Parse it into its constituent values, details[0] is the Tasmota command, details[1] is the info description, details[2] is the category, details[3] is reboot, details[4] is network, details[5] is refresh 
     details = value.tokenize('|')
-    if ( state.flags.isRunCommand == false ) app.updateSetting("commandText", details[0])
+    
     log("refreshUI", "Retrieved command data for ${details[0]}.", 2)
+    state.info.sampleCommand = details[0]
     state.info.description = details[1]
     state.info.reboot = details[3]
     state.info.network = details[4]
     state.info.refresh = details[5]
+    
+    if (state.flags.isCopyCommand == true ) {
+        log("refreshUI", "isCopyCommand ${state.flags.isCopyCommand} ", 1)
+        log("refreshUI", "Copied ${state.info.sampleCommand} to Text edit box", 1)
+        app.updateSetting("commandText", state.info.sampleCommand)
+        state.flags.isCopyCommand = false
+    }
     
     log("refreshUI", "Refresh Complete.", 2)
 }
@@ -433,32 +476,71 @@ void refreshUI(){
 //This is the device list selection page
 def devicePage() {
     dynamicPage(name: "devicePage") {
-        section ("<b>Populate Tasmota Device Lists</b>") {
-            input "devices0", "capability.*", title: "All Tasmota Devices" , multiple: true, required: false, defaultValue: null
-		    input "devices1", "capability.bulb", title: "Tasmota Bulbs" , multiple: true, required: false, defaultValue: null
-            input "devices2", "capability.switch", title: "Tasmota Plugs" , multiple: true, required: false, defaultValue: null
-            input "devices3", "capability.switch", title: "Tasmota Switches" , multiple: true, required: false, defaultValue: null
-        	input "devices4", "capability.fanControl", title: "Tasmota Fans" , multiple: true, required: false, defaultValue: null
-        	input "devices5", "capability.powerMeter", title: "Tasmota Power Meters" , multiple: true, required: false, defaultValue: null
-            input "devices6", "capability.sensor", title: "Tasmota Sensor Devices" , multiple: true, required: false, defaultValue: null
-            input "devices7", "capability.*", title: "Custom Device List" , multiple: true, required: false, defaultValue: null
-            input "devices8", "capability.*", title: "Single Device" , multiple: false, required: false, defaultValue: null
-            paragraph "<div style='color:#17202A;text-align:left; margin-top:0em; font-size:12px'><b>You can use these device list to target specific types of devices for given commands. The Custom Device List is nominally for Ad-Hoc selections.</b></div>"  //Line with Description of the selected command.
-            //input "devices", "device.", title: "Tasmota Devices" , multiple: true, required: true, defaultValue: null
+        section (titleise("Populate Tasmota Device Lists")) {
+            paragraph "<div style='color:#17202A;text-align:left; margin-top:0em; font-size:16px'><b>You can use these device lists to target specific types of devices for given commands.</b><br></div>"  //Line with Description of the selected command.
+            input "devices0", "capability.*", title: listTitle(0) , multiple: true, required: false, defaultValue: null, width: 6
+		    input "title0", "text", title: "<b>Edit List Titles</b><br>(blank for default)", description: "", required: false, submitOnChange: true, width: 2
+            
+            input "devices1", "capability.bulb", title: listTitle(1) , multiple: true, required: false, defaultValue: null, width: 6
+            input "title1", "text", title: "", description: "", required: false, submitOnChange: true, width: 2
+            
+            input "devices2", "capability.switch", title: listTitle(2) , multiple: true, required: false, defaultValue: null, width: 6
+            input "title2", "text", title: "", description: "", required: false, submitOnChange: true, width: 2
+            
+            input "devices3", "capability.switch", title: listTitle(3) , multiple: true, required: false, defaultValue: null, width: 6
+            input "title3", "text", title: "", description: "", required: false, submitOnChange: true, width: 2
+            
+        	input "devices4", "capability.fanControl", title: listTitle(4) , multiple: true, required: false, defaultValue: null, width: 6
+            input "title4", "text", title: "", description: "", required: false, submitOnChange: true, width: 2
+            
+        	input "devices5", "capability.powerMeter", title: listTitle(5) , multiple: true, required: false, defaultValue: null, width: 6
+            input "title5", "text", title: "", description: "", required: false, submitOnChange: true, width: 2
+            
+            input "devices6", "capability.sensor", title: listTitle(6) , multiple: true, required: false, defaultValue: null, width: 6
+            input "title6", "text", title: "", description: "", required: false, submitOnChange: true, width: 2
+            
+            input "devices7", "capability.*", title: listTitle(7) , multiple: true, required: false, defaultValue: null, width: 6
+            input "title7", "text", title: "", description: "", required: false, submitOnChange: true, width: 2
+            
+            input "devices8", "capability.*", title: listTitle(8) , multiple: true, required: false, defaultValue: null, width: 6
+            input "title8", "text", title: "", description: "", required: false, submitOnChange: true, width: 2
+            
+            input "devices9", "capability.*", title: listTitle(9)  , multiple: false, required: false, defaultValue: null, width: 6
+            input "title9", "text", title: "", description: "", required: false, submitOnChange: true, width: 2
+
+            paragraph "<div style='background-color:#000000; height: 0.5px; margin-top:0em; margin-bottom:0em ; font-size:16px'></div>"    //Horizontal Line
+            paragraph "<div style='color:#17202A;text-align:left; margin-top:1em; font-size:16px'><b>Items in the exclusion list will always be ignored, even if they are selected in any of the above lists. This can be used to prevent some devices from being upgraded or changed by accident.</b></div>"
+            input "devices10", "capability.*", title: listTitle(10)  , multiple: true, required: false, defaultValue: null, width: 6
+            input "title10", "text", title: "", description: "", required: false, submitOnChange: true, width: 2
+
+            //Set the flag to getDeviceLists in case we have made changes on this page.
             state.flags.isPopulatedDeviceListsChanged = true
 		}
 	}
-    //Set the flag to getDeviceLists in case we have made changes on this page.
-    
+}
+
+
+//Manages the titles of the lists. Uses custom title if present otherwise defaults to map value.
+def listTitle(listNumber){
+    listName = deviceListTitles[listNumber]
+    myTitle = app.getSetting("title${listNumber}")
+    if ( myTitle == null ) {
+        app.updateSetting("title${listNumber}", listName)
+        return ("<b>" + listName + "</b>")   
+        }
+    else {
+        return ("<b>" + myTitle + "</b>")
+        }
 }
 
 //Set the titles to a consistent style.
 def titleise(title){
-    title = "<div style='color:#0000FF;text-align:left; margin-top:0em; font-size:20px'><b><u>${title}</u></b></div>"
+    title = "<div style='color:#1962d7;text-align:left; margin-top:0em; font-size:20px'><b><u>${title}</u></b></div>"
 }
 
 //Clears the description variables.
 def clearDescription(){
+    state.info.sampleCommand = ""
     state.info.description = ""
     state.info.reboot = ""
     state.info.network = ""
@@ -486,10 +568,9 @@ int itemCount(itemList){
 
 def getSelectOk()
 {
-    def status = [ devicePage: devices0 ?: devices1 ?: devices2 ?: devices3 ?: devices4 ?: devices5 ?: devices6 ?: devices7 ?: devices8 ]
+    def status = [ devicePage: devices0 ?: devices1 ?: devices2 ?: devices3 ?: devices4 ?: devices5 ?: devices6 ?: devices7 ?: devices8 ?: devices9 ?: devices10 ]
 	status << [all: status.devicePage]
 }
-
 
 //Log status messages
 private log(name, message, int loglevel){
@@ -503,8 +584,6 @@ private log(name, message, int loglevel){
     if ( loglevel >= 2 ) { log.debug ( message ) }
 }
 
-
-
 //************************************************************************************************************************************************************************************************************************
 //************************************************************************************************************************************************************************************************************************
 //************************************************************************************************************************************************************************************************************************
@@ -515,25 +594,25 @@ private log(name, message, int loglevel){
 //************************************************************************************************************************************************************************************************************************
 //************************************************************************************************************************************************************************************************************************
 
-
 //Returns the Active Device List based on the user selection.
 def activeList(){     
-    if (useList == "All Tasmota Devices") devices = devices0
-    if (useList == "Tasmota Bulbs") devices = devices1
-    if (useList == "Tasmota Plugs") devices = devices2
-    if (useList == "Tasmota Switches") devices = devices3
-    if (useList == "Tasmota Fans") devices = devices4
-    if (useList == "Tasmota Power Meters") devices = devices5
-    if (useList == "Tasmota Sensor Devices") devices = devices6
-    if (useList == "Custom Device List") devices = devices7
-    if (useList == "Single Device") devices = devices8
+    if (useList == settings.title0) devices = devices0
+    if (useList == settings.title1) devices = devices1
+    if (useList == settings.title2) devices = devices2
+    if (useList == settings.title3) devices = devices3
+    if (useList == settings.title4) devices = devices4
+    if (useList == settings.title5) devices = devices5
+    if (useList == settings.title6) devices = devices6
+    if (useList == settings.title7) devices = devices7
+    if (useList == settings.title8) devices = devices8
+    if (useList == settings.title9) devices = devices9
+    //We ignore list list 10 as this is used for exclusions.
 
     state.deviceCount = itemCount(devices)
+    state.excludedDeviceCount = itemCount(devices10)
     log("activeList", "Selected Device List is: ${devices.toString()}", 1)
     return devices
 }
-
-
 
 //Returns a list of commands that is usable by the drop down control. A filter is applied when one is selected selected.
 def getCommands(){
@@ -555,8 +634,6 @@ def getCommands(){
     log("getCommands", "commandList is: ${return commandList.unique().sort()}", 2)
     return commandList.unique().sort()
 }
-
-
 
 
 //************************************************************************************************************************************************************************************************************************
@@ -587,26 +664,6 @@ def isCommandListChanged(){
         state.flags.commandListChanged = true
     } 
     else state.flags.commandListChanged = false
-}
-
-//Determine if something has changed in the commandText text box.
-def isCommandTextChanged(){
-    if (state.commandTextHistory.new.toString() != settings.commandText.toString() ) {
-        state.commandTextHistory.old = state.commandTextHistory.new
-        state.commandTextHistory.new = settings.commandText
-        state.flags.commandTextChanged = true
-       }
-    else state.flags.commandTextChanged = false
-}
-
-//Determine if something has changed in the filter list.
-def isUseListChanged(){
-    if (state.useListHistory.new != settings.useList ) {
-        state.useListHistory.old = state.useListHistory.new
-        state.useListHistory.new = settings.useList
-        state.flags.useListChanged = true
-    }
-    else state.flags.useListChanged = false
 }
 
 //Determine if the selected color has changed.
@@ -652,29 +709,18 @@ void updated() {
 
 void initialize() {
     log.info "Running Initialize."        
-    state.info = [description: " ", reboot: " ", network: " ", refresh: " "]
-    state.flags = [filterChanged: false, commandListChanged: false, commandTextChanged: false, useListChanged: false, isRunCommand: false, isPopulatedDeviceListsChanged: false]
-    state.commandTextHistory = [new: "seed1", old: "seed"]
+    state.info = [sampleCommand: " ", description: " ", reboot: " ", network: " ", refresh: " "]
+    state.flags = [filterChanged: false, commandListChanged: false, isRunCommand: false, isCopyCommand: false, isPopulatedDeviceListsChanged: false]
     state.filterHistory = [new: "seed1", old: "seed"]
     state.commandListHistory = [new: "seed1", old: "seed"]
     state.useListHistory = [new: "seed1", old: "seed"]
     state.colorHistory = [new: "seed1", old: "seed"]
     state.deviceCount = 0
+    state.ExcludedDeviceCount = 0
     state.results = " "
     
     createDeviceList()
     createFilterList()
-    
-//	app.clearSetting("debugOutput")	// app.updateSetting() only updates, won't create.
-
-}
-
-
-
-def setDebug(dbg, inf) {
-	app.updateSetting("debugOutput",[value:dbg, type:"bool"])
-	app.updateSetting("descTextEnable",[value:inf, type:"bool"])
-	if (descTextEnable) log.info "debugOutput: $debugOutput, descTextEnable: $descTextEnable"
 }
 
 
@@ -682,20 +728,20 @@ def setDebug(dbg, inf) {
 //This gets updated everytime from the Device selection dynamic page.
 def createDeviceList(){
     
-        log("createDeviceList", "Preparing list of populated device lists.", 1)
-        def list = []
-        if ( devices0 != null && devices0.size() > 0 ) list.add("All Tasmota Devices")
-        if ( devices1 != null && devices1.size() > 0 ) list.add("Tasmota Bulbs")
-        if ( devices2 != null && devices2.size() > 0 ) list.add("Tasmota Plugs")
-        if ( devices3 != null && devices3.size() > 0 ) list.add("Tasmota Switches")
-        if ( devices4 != null && devices4.size() > 0 ) list.add("Tasmota Fans")
-        if ( devices5 != null && devices5.size() > 0 ) list.add("Tasmota Power Meters")
-        if ( devices6 != null && devices6.size() > 0 ) list.add("Tasmota Sensor Devices")
-        if ( devices7 != null && devices7.size() > 0 ) list.add("Custom Device List")
-        if ( devices8 != null ) list.add("Single Device")
-        state.flags.isPopulatedDeviceListsChanged == false
-        state.DeviceList = list
-       
+    log("createDeviceList", "Preparing list of populated device lists.", 1)
+    def list = []
+    if ( devices0 != null && devices0.size() > 0 ) list.add(settings.title0)
+    if ( devices1 != null && devices1.size() > 0 ) list.add(settings.title1)
+    if ( devices2 != null && devices2.size() > 0 ) list.add(settings.title2)
+    if ( devices3 != null && devices3.size() > 0 ) list.add(settings.title3)
+    if ( devices4 != null && devices4.size() > 0 ) list.add(settings.title4)
+    if ( devices5 != null && devices5.size() > 0 ) list.add(settings.title5)
+    if ( devices6 != null && devices6.size() > 0 ) list.add(settings.title6)
+    if ( devices7 != null && devices7.size() > 0 ) list.add(settings.title7)
+    if ( devices8 != null && devices8.size() > 0 ) list.add(settings.title8)
+    if ( devices9 != null ) list.add(settings.title9)
+    state.flags.isPopulatedDeviceListsChanged == false
+    state.DeviceList = list.sort()
     }
 
 
@@ -717,4 +763,3 @@ def createFilterList(){
     log("filters", "Filters List is: ${myfilter.unique().sort().toString()}", 2)
     state.FilterList = myfilter.unique().sort()
 }
-
