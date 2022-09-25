@@ -1,8 +1,7 @@
 {
-  "author": "Gary J. Milne",
-  "gitHubUrl": "https://github.com/garymilne",
-  "packages": [
-		{
+	"author": "Gary J. Milne",
+	"gitHubUrl": "https://github.com/garymilne",
+	"packages": [{
 			"name": "Tasmota Sync Drivers",
 			"category": "Integrations",
 			"location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/packageManifest.json",
@@ -12,6 +11,17 @@
 				"Temperature & Humidity",
 				"Misc. Devices",
 				"Tasmota"
+			]
+		},
+		{
+			"name": "Precipitation and Weather Monitor for NWS Data",
+			"category": "Integrations",
+			"location": "https://github.com/GaryMilne/Hubitat-Apps/blob/main/packageManifestApps.json",
+			"description": "Gathers hourly precipitation and other weather data from your nearest airport and makes it available to you via a device driver.",
+			"tags": [
+				"Irrigation",
+				"Weather",
+				"Temperature & Humidity"
 			]
 		}
 	]
