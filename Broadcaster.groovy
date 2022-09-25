@@ -243,7 +243,7 @@ def mainPage() {
                 paragraph "<div style='color:#1962d7;text-align:left; margin-top:0em; margin-bottom:0em; font-size:16px'><b> - OR - </b></div>"
                 
                 //commandText box which is what gets executed           
-                input("commandText", "text", title:"<b>Enter\\Edit Tasmota command line:</b> (<b>Tab or Enter</b> to save changes after edit.).", description: "", required: false, submitOnChange: true, width: 12)
+                input("commandText", "text", title:"<b>Enter\\Edit Tasmota command line:</b> (<b>Tab or Enter</b> to save changes after edit.).", description: "", required: false, submitOnChange: true, width: 10)
             
                 //Show the color picker if the filter is set to webUI.
                 if (showColorControl()) {
