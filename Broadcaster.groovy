@@ -31,8 +31,9 @@
 * Version 1.1.1  - Added the ability to customize the titles of the device lists.
 * Version 1.1.2  - Added a device exclusion list. Added ability to clear results field. Improved colors for a more harmonious look.
 * Version 1.1.3  - Added a Tasmota Sync Filter and a few sample commands.
+* Version 1.1.4  - Fixed bug with handling of colors.
 *
-*  Gary Milne - September 24th, 2022
+*  Gary Milne - September 25th, 2022
 *
 *  Note: I detected some quirky behaviour which I reported here. https://community.hubitat.com/t/bug-report-bug-or-just-known-quirky-behaviour/100620
 *  Essentially any "suspiscious" HTML tags in the text box get replaced with a pseudonymous value, however the programatic text value remains correct. Behaviour noted, doing nothing about it at this point.
@@ -193,11 +194,8 @@ preferences {
 }
 
 def mainPage() {
-    //if (state.flags.initialize == null ) initialize()
     if (state.flags == null ) initialize()
-    //initialize()
-    
-	dynamicPage(name: "mainPage", install: true, uninstall: true ) {
+    dynamicPage(name: "mainPage", install: true, uninstall: true ) {
 
         //Check the state of the controls to figure out what changed and then refresh the screen
         isReset()
@@ -247,7 +245,8 @@ def mainPage() {
             
                 //Show the color picker if the filter is set to webUI.
                 if (showColorControl()) {
-                    input "myColor", "color", title: "<b>Select Color: ${myColor}</b>", required: false, submitOnChange: true, width: 2, defaultValue: '#ffffff'
+                    if ( myColor == null ) myColor = "#ffffff"
+                    input "myColor", "color", title: "<b>Select Color: ${myColor}</b>", required: false, submitOnChange: true, width: 2, defaultValue: "#ffffff"
                     }
                 } //End Section 2
 
@@ -300,7 +299,7 @@ def mainPage() {
 
 //Determines whether or not to show the Color control on the screen.
 def showColorControl(){
-    if (commandText.toLowerCase().contains("color") == true){ 
+    if (commandText != null && commandText.toLowerCase().contains("color") == true){ 
         return true 
     }
     else {
@@ -334,7 +333,6 @@ def isReset(){
         state.flags = [filterChanged: false, commandListChanged: false, isRunCommand: false, reset: false]
         state.results = " "
         app.updateSetting("commandText" , "None")
-        if ( settings.myColor == null ) app.updateSetting("myColor", "#ffffff")
         app.updateSetting("useList", [value:null, type:"enum"])  //Works
         app.updateSetting("filter", [value:"All", type:"enum"])  //Works
         app.updateSetting("commandListItem", [value:"*** Select a Command ***", type:"enum"])  //Works
@@ -362,8 +360,8 @@ def runCommand(){
     }
     
     //If the command contains the phrase TSync then we know if must contain single quoted data and thus single quotes cannot be replaced.
-    //In all other circumstances single quotes are replaced with double quotes. So disabling a rule will convert rule '' to rule "" which is the correct syntax.
-    if (commandText.contains("TSync") == false ){
+    //In all other circumstances single quotes are replaced with double quotes. For example, disabling a rule will convert rule '' to rule "" which is the correct syntax.
+    if (commandText != null && commandText.contains("TSync") == false ){
         newCommandText = commandText.replace("'","\"") 
         }
     else { 
@@ -435,9 +433,8 @@ void refreshUI(){
     }
     
     //If the color changes then adjust the content of the commandText to incorporate the new color.
-    if (state.flags.colorChanged == true && commandText != null && commandText.toLowerCase().contains("color") == true){
-        details = settings.commandText.tokenize(' ')
-        app.updateSetting("commandText", details[0] + " ${myColor}")
+    if (state.flags.colorChanged == true && commandText != null && commandText.toLowerCase().contains("webcolor") == true && commandText.size() < 20 == true){
+        app.updateSetting("commandText", commandText.replace("#ffffff", myColor) )  
         log("refreshUI", "New color selected:  ${myColor}", 1)
         return
     }
