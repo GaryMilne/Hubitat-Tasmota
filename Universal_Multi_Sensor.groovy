@@ -132,7 +132,7 @@ sensorType = "All"
 metadata {
 	  definition (name: "Tasmota Sync - Universal Multi Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor.groovy", singleThreaded: true )  {
 	//definition (name: "Tasmota Sync - Universal Multi Sensor Single Relay", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Single_Relay.groovy", singleThreaded: true )  {
-	//definition (name: "Tasmota Sync - Universal Multi Sensor Double Relay", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Double_Relay.groovy", singleThread
+	//definition (name: "Tasmota Sync - Universal Multi Sensor Double Relay", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Double_Relay.groovy", singleThreaded: true )  {
         //capability "LiquidFlowRate"
         //capability "PressureMeasurement"
         
