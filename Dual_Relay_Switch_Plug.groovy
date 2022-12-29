@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync N Port Relay\Switch\Plug Driver with PM
-*  Version: v1.2.4
+*  Version: v1.2.5
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota N Port Relay\Switch\Plug with Power Monitoring. Provides Realtime and native synchronization between Hubitat and Tasmota.
 *  The N port version handles any number of switches from 1 to 8. The SINGLE, DUAL, TRIPLE, QUAD and EIGHT port relay/switch/plug are all simply copies of this driver with the following adjustment.
@@ -31,6 +31,7 @@
 *  Version 1.2.2 - Fixed bug for POWER values received by TasmotaSync not being recorded properly
 *  Version 1.2.3 - Restored missing Toggle command option. Added option to display\track all Tasmota Energy events
 *  Version 1.2.4 - Incremented Core 0.98.2. Fixed "DIMMER" code with improved version from Dimmer implementation.
+*  Version 1.2.5 - Added child creation on demand
 *
 *  Authors Notes:
 *  For more information on Tasmota Sync drivers check out these resources:
@@ -49,39 +50,45 @@ import groovy.json.JsonSlurper
 @Field static final Integer switchCount = 2
 
 metadata {
-	//definition (name: "Tasmota Sync - Single Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy", singleThreaded: true )  {
-        definition (name: "Tasmota Sync - Dual Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy", singleThreaded: true )  {
-        //definition (name: "Tasmota Sync - Triple Relay/Switch/Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Triple_Relay_Switch_Plug.groovy", singleThreaded: true )  {
-        //definition (name: "Tasmota Sync - Quad Relay/Switch/Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Quad_Relay_Switch_Plug.groovy", singleThreaded: true )  {
-        //definition (name: "Tasmota Sync - Eight Relay/Switch/Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Eight_Relay_Switch_Plug.groovy", singleThreaded: true )  {
-        capability "Switch"
-        capability "Refresh"
+		//definition (name: "Tasmota Sync - Single Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy", singleThreaded: true )  {
+		definition (name: "Tasmota Sync - Dual Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy", singleThreaded: true )  {
+		//definition (name: "Tasmota Sync - Triple Relay/Switch/Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Triple_Relay_Switch_Plug.groovy", singleThreaded: true )  {
+		//definition (name: "Tasmota Sync - Quad Relay/Switch/Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Quad_Relay_Switch_Plug.groovy", singleThreaded: true )  {
+		//definition (name: "Tasmota Sync - Eight Relay/Switch/Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Eight_Relay_Switch_Plug.groovy", singleThreaded: true )  {
+		capability "Switch"
+		capability "Refresh"
             
-        //Driver specific variables where case does not matter.
+		//Driver specific variables where case does not matter.
         attribute "Status", "string" 
         
-        //Allow Power Monitoring for Plugs with 2 or less switches
+		//Allow Power Monitoring for Plugs with 2 or less switches
         if (switchCount <= 2) { capability "PowerMeter" ; capability "CurrentMeter" ; capability "EnergyMeter" ; capability "VoltageMeasurement"                                   
-            attribute "current", "number" ; attribute "power", "number" ; attribute "voltage", "number" ; attribute "apparentPower", "number" ; attribute "energyToday", "number" ;
-            attribute "energyTotal", "number" ; attribute "energyYesterday", "number" ; attribute "powerFactor", "number" ; "number" ; attribute "reactivePower", "number"
+			attribute "current", "number" ; attribute "power", "number" ; attribute "voltage", "number" ; attribute "apparentPower", "number" ; attribute "energyToday", "number" ;
+			attribute "energyTotal", "number" ; attribute "energyYesterday", "number" ; attribute "powerFactor", "number" ; "number" ; attribute "reactivePower", "number"
             }
             
-        //log.debug ("SwitchCount is: ${switchCount}")
-        if (switchCount >= 1) { attribute "switch",  "string" }
-        if (switchCount >= 2) { attribute "switch2", "string" ; command "Power2On" ; command "Power2Off" }
+		//log.debug ("SwitchCount is: ${switchCount}")
+		if (switchCount >= 1) { attribute "switch",  "string" ; command "Power1On" ; command "Power1Off" }
+		if (switchCount >= 2) { attribute "switch2", "string" ; command "Power2On" ; command "Power2Off" }
 		if (switchCount >= 3) { attribute "switch3", "string" ; command "Power3On" ; command "Power3Off" }
-        if (switchCount >= 4) { attribute "switch4", "string" ; command "Power4On" ; command "Power4Off" }
+		if (switchCount >= 4) { attribute "switch4", "string" ; command "Power4On" ; command "Power4Off" }
 		if (switchCount >= 5) { attribute "switch5", "string" ; command "Power5On" ; command "Power5Off" }
-        if (switchCount >= 6) { attribute "switch6", "string" ; command "Power6On" ; command "Power6Off" }
+		if (switchCount >= 6) { attribute "switch6", "string" ; command "Power6On" ; command "Power6Off" }
 		if (switchCount >= 7) { attribute "switch7", "string" ; command "Power7On" ; command "Power7Off" }
-        if (switchCount >= 8) { attribute "switch8", "string" ; command "Power8On" ; command "Power8Off" }
+		if (switchCount >= 8) { attribute "switch8", "string" ; command "Power8On" ; command "Power8Off" }
             
-        command "initialize"
-        command "tasmotaInjectRule"
-        command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "An optional single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
-        command "tasmotaTelePeriod", [ [name:"Seconds*", type: "STRING", description: "The number of seconds between Tasmota sensor updates (TelePeriod XX)."] ]
-        command "toggle"
-        //command "test"
+		command "initialize"
+		command "tasmotaInjectRule"
+		command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "An optional single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
+		command "tasmotaTelePeriod", [ [name:"Seconds*", type: "STRING", description: "The number of seconds between Tasmota sensor updates (TelePeriod XX)."] ]
+		command "toggle"
+		command "ChildrenCreate"
+		command "ChildrenRemove"
+		command "componentOn"
+		command "componentOff"
+		command "componentRefresh"
+		command "updateChild"
+		//command "test"
 	}
     
     section("Configure the Inputs"){
@@ -241,6 +248,93 @@ def clean(){
 //******
 //*********************************************************************************************************************************************************************
 
+def ChildrenCreate()
+{
+    log.debug "Creating"
+
+    try {
+        for (i in 1..4) {
+           log.debug "Creating child device for ep"+i
+	       addChildDevice("hubitat", "Generic Component Switch", "${device.deviceNetworkId}-ep${i}",
+		      [completedSetup: true, label: "${device.displayName} (S${i})",
+		      isComponent: false, componentName: "ep$i", componentLabel: "Switch $i"])
+        }
+    } catch (e) {
+         log.debug "Didnt create children for some reason: ${e}"
+    }
+}
+
+def ChildrenRemove()
+{
+	// This will remove all child devices
+	log.debug "Removing Child Devices"
+	try
+	{
+		getChildDevices()?.each
+		{
+			try
+			{
+                		log.debug "Removing ${it.deviceNetworkId} child device"
+				deleteChildDevice(it.deviceNetworkId)
+			}
+			catch (e)
+			{
+				log.debug "Error deleting ${it.deviceNetworkId}, probably locked into a SmartApp: ${e}"
+			}
+		}
+	}
+	catch (err)
+	{
+		log.debug "Either no child devices exist or there was an error finding child devices: ${err}"
+	}
+}
+
+def componentOn(child)
+{
+    log.debug "Received child on request from ep"+child.deviceNetworkId.substring(child.deviceNetworkId.length()-1)
+    "${"Power"+child.deviceNetworkId.substring(child.deviceNetworkId.length()-1)+"On"}"()
+}
+
+def componentOff(child)
+{
+    log.debug "Received child off request from ep"+child.deviceNetworkId.substring(child.deviceNetworkId.length()-1)
+    "${"Power"+child.deviceNetworkId.substring(child.deviceNetworkId.length()-1)+"Off"}"()
+}
+
+def componentRefresh(child)
+{
+    refresh()
+}
+
+def updateChild(String ep, String status)
+{
+    //First update the parent
+    if (ep==1) {ep_modified = ""} else {ep_modified = ep}
+    sendEvent(name: "switch"+ep_modified, value: status, descriptionText: "The switch ${ep} has been turned ${status}", isStateChange: true)
+
+    //Now find and update the child
+	def childName = device.deviceNetworkId+"-ep"+ep
+	def curdevice = null
+	try
+	{
+		// Got a zone status so first try to find the correct child device
+		curdevice = getChildDevices()?.find { it.deviceNetworkId == childName }
+	}
+	catch (e)
+	{
+		log.debug "Failed to find child " + childName + " - exception ${e}"
+	}
+
+	if (curdevice == null)
+	{
+		log.debug "Failed to find child called " + childName + " - exception ${e}"
+	}
+	else
+	{
+		curdevice?.sendEvent(name: "switch", value: status)
+    }
+}
+
 //Turns the Power on to one or all switches based on settings. Note: Power and Power1 are synonymous in Tasmota
 def on() {
     if (settings.switchBehaviour == "1") {
@@ -284,6 +378,16 @@ def off() {
         callTasmota("BACKLOG", command)
         }
 	}
+
+def Power1On() {
+    log("Action", "Turn on switch 1", 0)
+    callTasmota("POWER1", "ON")
+    }
+
+def Power1Off() {
+    log("Action", "Turn off switch 1", 0)
+    callTasmota("POWER1", "OFF")
+    }
 
 def Power2On() {
     log("Action", "Turn on switch 2", 0)
@@ -451,7 +555,7 @@ def hubitatResponse(body){
                     updateStatus("Complete:Success")
                     //We got the response we were looking for so we can actually change the state of the switch in the UI.
                     //If the switch is turned off then the power statistics must be zero. However, if TSync is enabled then it will fire a Sync anyway.
-                    sendEvent(name: "switch", value: ActionValue.toLowerCase(), descriptionText: "The switch has been turned ${ActionValue.toLowerCase()}", isStateChange: true )
+                    updateChild("1", ActionValue.toLowerCase())
                     } 
             else {
                 log("hubitatResponse","Power state failed to apply", -1)
@@ -466,7 +570,7 @@ def hubitatResponse(body){
                     updateStatus("Complete:Success")
                     //We got the response we were looking for so we can actually change the state of the switch in the UI.
                     //If the switch is turned off then the power statistics must be zero. However, if TSync is enabled then it will fire a Sync anyway.
-                    sendEvent(name: "switch2", value: ActionValue.toLowerCase(), descriptionText: "The switch2 has been turned ${ActionValue.toLowerCase()}", isStateChange: true )
+                    updateChild("2", ActionValue.toLowerCase())
                     } 
             else {
                 log("hubitatResponse","Power2 state failed to apply", -1)
@@ -481,7 +585,7 @@ def hubitatResponse(body){
                     updateStatus("Complete:Success")
                     //We got the response we were looking for so we can actually change the state of the switch in the UI.
                     //If the switch is turned off then the power statistics must be zero. However, if TSync is enabled then it will fire a Sync anyway.
-                    sendEvent(name: "switch3", value: ActionValue.toLowerCase(), descriptionText: "The switch3 has been turned ${ActionValue.toLowerCase()}", isStateChange: true )
+                    updateChild("3", ActionValue.toLowerCase())
                     } 
             else {
                 log("hubitatResponse","Power3 state failed to apply", -1)
@@ -496,7 +600,7 @@ def hubitatResponse(body){
                     updateStatus("Complete:Success")
                     //We got the response we were looking for so we can actually change the state of the switch in the UI.
                     //If the switch is turned off then the power statistics must be zero. However, if TSync is enabled then it will fire a Sync anyway.
-                    sendEvent(name: "switch4", value: ActionValue.toLowerCase(), descriptionText: "The switch4 has been turned ${ActionValue.toLowerCase()}", isStateChange: true )
+                    updateChild("4", ActionValue.toLowerCase())
                     } 
             else {
                 log("hubitatResponse","Power4 state failed to apply", -1)
@@ -511,7 +615,7 @@ def hubitatResponse(body){
                     updateStatus("Complete:Success")
                     //We got the response we were looking for so we can actually change the state of the switch in the UI.
                     //If the switch is turned off then the power statistics must be zero. However, if TSync is enabled then it will fire a Sync anyway.
-                    sendEvent(name: "switch5", value: ActionValue.toLowerCase(), descriptionText: "The switch5 has been turned ${ActionValue.toLowerCase()}", isStateChange: true )
+                    updateChild("5", ActionValue.toLowerCase())
                     } 
             else {
                 log("hubitatResponse","Power5 state failed to apply", -1)
@@ -526,7 +630,7 @@ def hubitatResponse(body){
                     updateStatus("Complete:Success")
                     //We got the response we were looking for so we can actually change the state of the switch in the UI.
                     //If the switch is turned off then the power statistics must be zero. However, if TSync is enabled then it will fire a Sync anyway.
-                    sendEvent(name: "switch6", value: ActionValue.toLowerCase(), descriptionText: "The switch6 has been turned ${ActionValue.toLowerCase()}", isStateChange: true )
+                    updateChild("6", ActionValue.toLowerCase())
                     } 
             else {
                 log("hubitatResponse","Power6 state failed to apply", -1)
@@ -541,7 +645,7 @@ def hubitatResponse(body){
                     updateStatus("Complete:Success")
                     //We got the response we were looking for so we can actually change the state of the switch in the UI.
                     //If the switch is turned off then the power statistics must be zero. However, if TSync is enabled then it will fire a Sync anyway.
-                    sendEvent(name: "switch7", value: ActionValue.toLowerCase(), descriptionText: "The switch7 has been turned ${ActionValue.toLowerCase()}", isStateChange: true )
+                    updateChild("7", ActionValue.toLowerCase())
                     } 
             else {
                 log("hubitatResponse","Power7 state failed to apply", -1)
@@ -556,7 +660,7 @@ def hubitatResponse(body){
                     updateStatus("Complete:Success")
                     //We got the response we were looking for so we can actually change the state of the switch in the UI.
                     //If the switch is turned off then the power statistics must be zero. However, if TSync is enabled then it will fire a Sync anyway.
-                    sendEvent(name: "switch8", value: ActionValue.toLowerCase(), descriptionText: "The switch8 has been turned ${ActionValue.toLowerCase()}", isStateChange: true )
+                    updateChild("8", ActionValue.toLowerCase())
                    } 
             else {
                 log("hubitatResponse","Power8 state failed to apply", -1)
@@ -591,15 +695,15 @@ def hubitatResponse(body){
                 //"HSBColor":"248,84,0","White":68,"CT":500,"Channel":[0,0,0,0,68],"Scheme":0,"Fade":"OFF","Speed":20,"LedTable":"ON","Wifi":{"AP":1,"SSId":"5441","BSSId":"A0:04:60:95:0E:62","Channel":6,"Mode":"11n",
                 //"RSSI":100,"Signal":-47,"LinkCount":1,"Downtime":"0T00:00:06"}}
                 log ("hubitatResponse","Setting device handler values to match device.", 0)
-                if (body?.POWER)  sendEvent(name: "switch",  value: body.POWER.toLowerCase(), displayed:false)
-                if (body?.POWER1) sendEvent(name: "switch",  value: body.POWER1.toLowerCase(), displayed:false)
-                if (body?.POWER2) sendEvent(name: "switch2", value: body.POWER2.toLowerCase(), displayed:false)
-                if (body?.POWER3) sendEvent(name: "switch3", value: body.POWER3.toLowerCase(), displayed:false)
-                if (body?.POWER4) sendEvent(name: "switch4", value: body.POWER4.toLowerCase(), displayed:false)
-                if (body?.POWER5) sendEvent(name: "switch5", value: body.POWER5.toLowerCase(), displayed:false)
-                if (body?.POWER6) sendEvent(name: "switch6", value: body.POWER6.toLowerCase(), displayed:false)
-                if (body?.POWER7) sendEvent(name: "switch7", value: body.POWER7.toLowerCase(), displayed:false)
-                if (body?.POWER8) sendEvent(name: "switch8", value: body.POWER8.toLowerCase(), displayed:false)
+                if (body?.POWER)  updateChild("1", body.POWER.toLowerCase())
+                if (body?.POWER1) updateChild("1", body.POWER1.toLowerCase())
+                if (body?.POWER2) updateChild("2", body.POWER2.toLowerCase())
+                if (body?.POWER3) updateChild("3", body.POWER3.toLowerCase())
+                if (body?.POWER4) updateChild("4", body.POWER4.toLowerCase())
+                if (body?.POWER5) updateChild("5", body.POWER4.toLowerCase())
+                if (body?.POWER6) updateChild("6", body.POWER4.toLowerCase())
+                if (body?.POWER7) updateChild("7", body.POWER4.toLowerCase())
+                if (body?.POWER8) updateChild("8", body.POWER4.toLowerCase())
                 updateStatus("Complete:Success")
                 break            
             
