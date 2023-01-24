@@ -208,6 +208,7 @@ def initialize(){
         if ( device.currentValue("power") == null ) sendEvent(name: "power", value: 0, descriptionText: "Power (watts) events have been enabled", unit: "Watts", isStateChange: true )
         if ( device.currentValue("apparentPower") == null ) sendEvent(name: "apparentPower", value: 0, descriptionText: "Apparent Power events have been enabled", unit: "VA", isStateChange: true )
         if ( device.currentValue("energyToday") == null ) sendEvent(name: "energyToday", value: 0, descriptionText: "Energy Today events have been enabled", unit: "kWh", isStateChange: true )
+        if ( device.currentValue("energyToday") == null ) sendEvent(name: "energy", value: 0, unit: "kWh", isStateChange: true )
         if ( device.currentValue("energyTotal") == null ) sendEvent(name: "energyTotal", value: 0, descriptionText: "Energy Total events have been enabled", unit: "kWh", isStateChange: true )
         if ( device.currentValue("energyYesterday") == null ) sendEvent(name: "energyYesterday", value: 0, descriptionText: "Energy Yesterday events have been enabled", unit: "kWh", isStateChange: true )
         if ( device.currentValue("powerFactor") == null ) sendEvent(name: "powerFactor", value: 0, descriptionText: "Power Factor events have been enabled", isStateChange: true )
@@ -711,6 +712,7 @@ def syncTasmota(body){
         if (settings?.relayType.toInteger() >= 3 ){
             if ( apparentPower?.toFloat() >= 0 ) sendEvent(name: "apparentPower", value: apparentPower, unit: "VA" )
             if ( energyToday?.toFloat() >= 0 ) sendEvent(name: "energyToday", value: energyToday, unit: "kWh" )
+            if ( energyToday?.toFloat() >= 0 ) sendEvent(name: "energy", value: energyToday, unit: "kWh" )
             if ( energyTotal?.toFloat() >= 0 ) sendEvent(name: "energyTotal", value: energyTotal, unit: "kWh" )
             if ( energyYesterday?.toFloat() >= 0 ) sendEvent(name: "energyYesterday", value: energyYesterday, unit: "kWh" )
             if ( powerFactor?.toFloat() >= 0 ) sendEvent(name: "powerFactor", value: powerFactor )
@@ -769,6 +771,7 @@ def statusResponse(body){
         if (settings.relayType.toInteger() >= 3){
             if (body?.STATUSSNS?.ENERGY?.APPARENTPOWER != null ) {  log("updateData", "Apparent Power is: ${body.STATUSSNS.ENERGY.APPARENTPOWER}" , 2)  ;  sendEvent(name: "apparentPower", value: body.STATUSSNS.ENERGY.APPARENTPOWER ) }
             if (body?.STATUSSNS?.ENERGY?.TODAY != null ) {  log("updateData", "Energy Today is: ${body.STATUSSNS.ENERGY.TODAY}" , 2)  ;  sendEvent(name: "energyToday", value: body.STATUSSNS.ENERGY.TODAY ) }
+            if (body?.STATUSSNS?.ENERGY?.TODAY != null ) {  sendEvent(name: "energy", value: body.STATUSSNS.ENERGY.TODAY ) }
             if (body?.STATUSSNS?.ENERGY?.TOTAL != null ) {  log("updateData", "Energy Total is: ${body.STATUSSNS.ENERGY.TOTAL}" , 2)  ;  sendEvent(name: "energyTotal", value: body.STATUSSNS.ENERGY.TOTAL ) }
             if (body?.STATUSSNS?.ENERGY?.YESTERDAY != null ) {  log("updateData", "Energy Yesterday is: ${body.STATUSSNS.ENERGY.YESTERDAY}" , 2)  ;  sendEvent(name: "energyYesterday", value: body.STATUSSNS.ENERGY.YESTERDAY ) }
             if (body?.STATUSSNS?.ENERGY?.FACTOR != null ) {  log("updateData", "Power Factor is: ${body.STATUSSNS.ENERGY.POWERFACOR}" , 2)  ;  sendEvent(name: "powerFactor", value: body.STATUSSNS.ENERGY.FACTOR ) }
