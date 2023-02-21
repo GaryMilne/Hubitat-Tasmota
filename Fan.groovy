@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Fan Driver with Switch
-*  Version: v1.0.1
+*  Version: v1.1.0
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Ceiling Fan. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -22,6 +22,7 @@
 *  Version 0.98.0 - All versions incremented and synchronised for HPM plublication
 *  Version 1.0.0 - All versions incremented and synchronised for HPM plublication via CSTEELE
 *  Version 1.0.1 - Incremented Core 0.98.2.
+*  Version 1.1.0 - Moved the fan light into a child device
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -46,6 +47,8 @@ metadata {
         attribute "switch", "string"
         attribute "Status", "string"
         
+        command "lightOn"
+        command "lightOff"
         command "fanOff"
         command "initialize"
         command "tasmotaInjectRule"
@@ -87,6 +90,21 @@ def test(){
 //****** Start of UNIQUE standard functions
 //******
 //*********************************************************************************************************************************************************************
+
+def createChildDeviceForLight() {
+    removeExistingChildDevices()
+    
+    addChildDevice("joelwetzel", "Tasmota Sync - Child Switch", "${device.displayName} Light", [completedSet: true, label: "${device.displayName} Light", isComponent: true, componentName: "${device.displayName} Light", componentLabel: "${device.displayName} Light"])
+}
+
+def removeExistingChildDevices() {
+	def existingChildDevices = getChildDevices()
+	if (existingChildDevices.size() > 0) {
+		existingChildDevices.each {
+			deleteChildDevice(it.deviceNetworkId)
+		}
+	}
+}
 
 //Updated gets run when the "Initialize" button is clicked or when the device driver is selected
 def initialize(){
@@ -134,17 +152,28 @@ def initialize(){
 //******
 //*********************************************************************************************************************************************************************
 
-//Turns the switch off. This corresponds to the light fixture in a typical ceiling fan arrangement.
+//Turns the fan-light child switch on. This corresponds to the light fixture in a typical ceiling fan arrangement.
 //Note: POWER and POWER1 are synonymous in Tasmota when issuing commands however STATE only returns "POWER"
-def on() {
+def lightOn() {
     log("Action", "Turn on switch", 0)
     callTasmota("POWER", "on")
     }
+
+def lightOff() {
+    log("Action", "Turn on switch", 0)
+    callTasmota("POWER", "off")
+    }
+
+//Turns the fan's switch on
+def on() {
+    log("Action", "Turn on switch", 0)
+    callTasmota("FANSPEED", "2")
+    }
         
-//Turns the switch on. This corresponds to the light fixture in a typical ceiling fan arrangement.
+//Turns the fan off.
 def off() {
 	log("Action", "Turn off switch", 0)
-    callTasmota("POWER", "off")
+    callTasmota("FANSPEED", "0")
 	}
 
 //Turns the fan off.
@@ -155,30 +184,9 @@ def fanOff() {
 
 //Cycles the fan to the next position in the cycle Off, Low, Medium, High, Off.
 //This is a function name expected to be present when the FanControl capability is enabled.
+//But it's not useful, and more likely to cause errors, so it does nothing here.
 void cycleSpeed(){
-    def currSpeed = device.currentValue("fanSpeed")
-    
-    switch(currSpeed) {                 
-        case ["off", "0"]:
-            log("Action", "cycleSpeed: Current speed: 0 - Requested speed is: 1", 0)
-            callTasmota("FANSPEED", "1")
-            break
-
-        case ["low", "1"]: 
-            log("Action", "cycleSpeed: Current speed: 1 - Requested speed is: 2", 0)
-            callTasmota("FANSPEED", "2")
-            break
-        
-        case ["medium", "2"]: 
-            log("Action", "cycleSpeed: Current speed: 2 - Requested speed is: 3", 0)
-            callTasmota("FANSPEED", "3")
-            break
-
-        case ["high", "3"]:
-            log("Action", "cycleSpeed: Current speed: 3 - Requested speed is: 0", 0)
-            callTasmota("FANSPEED", "0")
-            break
-    }
+    return
 }
 
 //Sets the fan to the Tasmota FANSPEED corresponding to the predetermined english names within the setSpeed() tile.
@@ -203,7 +211,6 @@ def setSpeed(String speed) {
             break
         
          case ["auto"]:
-            log("cycleSpeed", "Current speed is: ${currSpeed}", 0)
             break
     } 
 }
@@ -211,24 +218,29 @@ def setSpeed(String speed) {
 //device.speed is not declared in the capabilities documentation however I have come across it in other drivers, specifically the ABC controller which I use presonally.
 //So I have added support for this attribute for the widest compatibility
 void setfanSpeedAttribute(speed){
-    log("setfanSpeedAttribute", "Current fan speed is: ${speed}", 2)
+    newSpeed = "unknown"
+    
      switch(speed) {                 
-        case 0:
-            sendEvent(name: "speed", value: "off" )
-            break
+        case [0, "0"]:
+          newSpeed = "off"
+          break
 
-        case 1: 
-            sendEvent(name: "speed", value: "low" )
-            break
+        case [1, "1"]: 
+          newSpeed = "low"
+          break
         
-        case 2: 
-            sendEvent(name: "speed", value: "medium" )
-            break
+        case [2, "2"]: 
+          newSpeed = "medium"
+          break
 
-        case 3:
-            sendEvent(name: "speed", value: "high" )
-            break
+        case [3, "3"]:
+          newSpeed = "high"
+          break
     }
+    
+    log("setfanSpeedAttribute", "fanSpeed is: ${speed}, speed is: ${newSpeed}", 2)
+    sendEvent(name: "speed", value: newSpeed )
+    sendEvent(name: "switch", value: newSpeed == "off" ? "off" : "on")
 }
 
 
@@ -315,9 +327,16 @@ def hubitatResponse(body){
                 if (ActionValue.equalsIgnoreCase(body.POWER1) ){
                     log ("hubitatResponse","Power1 state applied successfully", 0)
                     updateStatus("Complete:Success")
-                    //We got the response we were looking for so we can actually change the state of the switch in the UI.
+                    //We got the response we were looking for so we can actually change the state of the child light switch in the UI.
                     //If the switch is turned off then the power statistics must be zero. However, if TSync is enabled then it will fire a Sync anyway.
-                    sendEvent(name: "switch", value: ActionValue.toLowerCase(), descriptionText: "The switch has been turned ${ActionValue.toLowerCase()}", isStateChange: true )
+                    def child = getChildDevices()[0]
+                    if (ActionValue.toLowerCase() == "on") {
+                        child.markOn()
+                    }
+                    else {
+                        child.markOff()
+                    }
+
                     if ( ActionValue.toLowerCase() == "on" ) state.lastOn = new Date().format('MM-dd HH:mm:ss')
                     if ( ActionValue.toLowerCase() == "off" ) state.lastOff = new Date().format('MM-dd HH:mm:ss')
                     } 
@@ -355,8 +374,15 @@ def hubitatResponse(body){
                 //"HSBColor":"248,84,0","White":68,"CT":500,"Channel":[0,0,0,0,68],"Scheme":0,"Fade":"OFF","Speed":20,"LedTable":"ON","Wifi":{"AP":1,"SSId":"5441","BSSId":"A0:04:60:95:0E:62","Channel":6,"Mode":"11n",
                 //"RSSI":100,"Signal":-47,"LinkCount":1,"Downtime":"0T00:00:06"}}
                 log ("hubitatResponse","Setting device handler values to match device.", 0)
-                sendEvent(name: "switch", value: body.POWER1.toLowerCase(), displayed:false)
+                def child = getChildDevices()[0]
+                if (body.POWER1.toLowerCase() == "on") {
+                    child.markOn()
+                }
+                else {
+                    child.markOff()
+                }
                 sendEvent(name: "fanSpeed", value: body.FANSPEED, displayed:false)
+                setfanSpeedAttribute(body.FANSPEED)
                 updateStatus("Complete:Success")
             	break            
             
@@ -414,12 +440,18 @@ def syncTasmota(body){
         
         //A value of '' for any of these means no update. Probably because the device has restarted and the %vars% have not repopulated. This is expected.
         if (body?.SWITCH1 != '') { switch1 = body?.SWITCH1 ; log ("syncTasmota","Switch is: ${switch1}", 2) }
-        if (body?.FANSPEED != '') { fanSpeed = body?.FANSPEED ; log ("syncTasmota","fanSpeed is: ${fanSpeed}", 2) }
+        if (body?.FANSPEED != '') {
+            fanSpeed = body?.FANSPEED ; 
+            log ("syncTasmota","fanSpeed is: ${fanSpeed}", 2)
+            setfanSpeedAttribute(fanSpeed)
+        }
         
         //Now apply any changes that have been found. In Tasmota, "power" is the switch state unless referring to sensor data.
-        if ( switch1.toInteger() == 0 ) sendEvent(name: "switch", value: "off", descriptionText: "Switch was turned off.")
-        if ( switch1.toInteger() == 1 ) sendEvent(name: "switch", value: "on", descriptionText: "Switch was turned on.")
-        if ( fanSpeed >= 0 ) sendEvent(name: "fanSpeed", value: fanSpeed, descriptionText: "fanSpeed was set to ${fanSpeed}.")
+        if ( switch1.toInteger() == 0 ) { getChildDevices()[0].markOff() }  // sendEvent(name: "switch", value: "off", descriptionText: "Switch was turned off.")
+        if ( switch1.toInteger() == 1 ) { getChildDevices()[0].markOn() } // sendEvent(name: "switch", value: "on", descriptionText: "Switch was turned on.")
+        if ( fanSpeed >= 0 ) {
+            sendEvent(name: "fanSpeed", value: fanSpeed, descriptionText: "fanSpeed was set to ${fanSpeed}.")
+        }
         
         updateStatus ("Complete:Tasmota Sync")
         log ("syncTasmota", "Sync completed. Exiting", 0)
@@ -558,6 +590,8 @@ def tasmotaInjectRule(){
 //Installed gets run when the device driver is selected and saved
 def installed(){
 	log ("Installed", "Installed with settings: ${settings}", 0)
+    
+    createChildDeviceForLight()
 }
 
 //Updated gets run when the "Save Preferences" button is clicked
@@ -1306,3 +1340,5 @@ def remainingTime(){
 //****** STANDARD: End of Supporting functions
 //******
 //*********************************************************************************************************************************************************************
+
+
