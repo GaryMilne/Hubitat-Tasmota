@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Fan Driver with Switch
-*  Version: v1.0.1
+*  Version: v1.0.2
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Ceiling Fan. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -22,6 +22,7 @@
 *  Version 0.98.0 - All versions incremented and synchronised for HPM plublication
 *  Version 1.0.0 - All versions incremented and synchronised for HPM plublication via CSTEELE
 *  Version 1.0.1 - Incremented Core 0.98.2.
+*  Version 1.0.2 - Approved GitHub changes from Joel Wetzel - Improved syncing from device back to fan driver #7
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -29,7 +30,7 @@
 * How to upgrade from Tasmota 8.X to Tasmota 11.X  https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/How%20to%20Upgrade%20from%20Tasmota%20from%208.X%20to%2011.X.pdf
 * Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 *
-*  Gary Milne - Aug 29, 2022
+*  Gary Milne - March 20, 2023
 *
 **/
 
@@ -208,6 +209,7 @@ def setSpeed(String speed) {
     } 
 }
 
+//@JoelWetzel comment.
 //device.speed is not declared in the capabilities documentation however I have come across it in other drivers, specifically the ABC controller which I use presonally.
 //So I have added support for this attribute for the widest compatibility
 void setfanSpeedAttribute(speed){
@@ -554,6 +556,7 @@ def tasmotaInjectRule(){
 *  Version 0.98.0 - Changed versioning to comply with Semantic Versioning standards (https://semver.org/). Moved CORE changelog to beginning of CORE section.
 *  Version 0.98.1 - Added a "warning" category and label to the logging section.
 *  Version 0.98.2 - Added a "tooltip" function into the HTML area. Not yet being used.
+*  Version 0.98.3 - Added some minor additions as a result of accepting GitHub changes.
 *
 */
 
@@ -1314,4 +1317,3 @@ def remainingTime(){
 //****** STANDARD: End of Supporting functions
 //******
 //*********************************************************************************************************************************************************************
-
