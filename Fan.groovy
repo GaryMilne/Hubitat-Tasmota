@@ -211,24 +211,28 @@ def setSpeed(String speed) {
 //device.speed is not declared in the capabilities documentation however I have come across it in other drivers, specifically the ABC controller which I use presonally.
 //So I have added support for this attribute for the widest compatibility
 void setfanSpeedAttribute(speed){
-    log("setfanSpeedAttribute", "Current fan speed is: ${speed}", 2)
+    newSpeed = "unknown"
+    
      switch(speed) {                 
-        case 0:
-            sendEvent(name: "speed", value: "off" )
-            break
+        case [0, "0"]:
+          newSpeed = "off"
+          break
 
-        case 1: 
-            sendEvent(name: "speed", value: "low" )
-            break
+        case [1, "1"]: 
+          newSpeed = "low"
+          break
         
-        case 2: 
-            sendEvent(name: "speed", value: "medium" )
-            break
+        case [2, "2"]: 
+          newSpeed = "medium"
+          break
 
-        case 3:
-            sendEvent(name: "speed", value: "high" )
-            break
+        case [3, "3"]:
+          newSpeed = "high"
+          break
     }
+    
+    log("setfanSpeedAttribute", "fanSpeed is: ${speed}, speed is: ${newSpeed}", 2)
+    sendEvent(name: "speed", value: newSpeed )
 }
 
 
@@ -414,7 +418,11 @@ def syncTasmota(body){
         
         //A value of '' for any of these means no update. Probably because the device has restarted and the %vars% have not repopulated. This is expected.
         if (body?.SWITCH1 != '') { switch1 = body?.SWITCH1 ; log ("syncTasmota","Switch is: ${switch1}", 2) }
-        if (body?.FANSPEED != '') { fanSpeed = body?.FANSPEED ; log ("syncTasmota","fanSpeed is: ${fanSpeed}", 2) }
+        if (body?.FANSPEED != '') {
+            fanSpeed = body?.FANSPEED ; 
+            log ("syncTasmota","fanSpeed is: ${fanSpeed}", 2)
+            setfanSpeedAttribute(fanSpeed)
+        }
         
         //Now apply any changes that have been found. In Tasmota, "power" is the switch state unless referring to sensor data.
         if ( switch1.toInteger() == 0 ) sendEvent(name: "switch", value: "off", descriptionText: "Switch was turned off.")
@@ -1306,3 +1314,4 @@ def remainingTime(){
 //****** STANDARD: End of Supporting functions
 //******
 //*********************************************************************************************************************************************************************
+
