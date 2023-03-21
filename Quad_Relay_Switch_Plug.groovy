@@ -555,6 +555,8 @@ def hubitatResponse(body){
                     //We got the response we were looking for so we can actually change the state of the switch in the UI.
                     //If the switch is turned off then the power statistics must be zero. However, if TSync is enabled then it will fire a Sync anyway.
                     updateChild("1", ActionValue.toLowerCase())
+			  //This is a special case because "switch" and switch1" are synonymous. updateChild only handles the numbered switches so this line is required.
+			  sendEvent(name: "switch", value: ActionValue.toLowerCase(), descriptionText: "The switch has been turned ${ActionValue.toLowerCase()}", isStateChange: true )
                     } 
             else {
                 log("hubitatResponse","Power state failed to apply", -1)
