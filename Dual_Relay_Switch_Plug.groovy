@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync N Port Relay\Switch\Plug Driver with PM
-*  Version: v1.3.0
+*  Version: v1.3.1
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota N Port Relay\Switch\Plug with\without Power Monitoring. Provides Realtime and native synchronization between Hubitat and Tasmota.
 *  The N port version handles any number of switches from 1 to 8. The SINGLE, DUAL, TRIPLE, QUAD and EIGHT port relay/switch/plug are all simply copies of this driver with the following adjustment.
@@ -32,6 +32,7 @@
 *  Version 1.2.4 - Incremented Core 0.98.3
 *  Version 1.2.5 - Added some logic (powerEnabled) so the driver could easily be configured to not list any power attributes or capabilities.
 *  Version 1.3.0 - Added GitHub request from @chcharles to allow for the creation of child devices when more than 1 relay is present (very clever!!). Also includes a few minor adjustments from github. Incremented Core 0.98.3
+*  Version 1.3.1 - Added flag for when child devices are in use.  Converted all logging in child device code to use the log function with appropriate loglevel. 
 *
 *  Authors Notes:
 *  For more information on Tasmota Sync drivers check out these resources:
@@ -39,7 +40,7 @@
 *  How to upgrade from Tasmota 8.X to Tasmota 11.X  https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/How%20to%20Upgrade%20from%20Tasmota%20from%208.X%20to%2011.X.pdf
 *  Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 *
-*  Gary Milne - March 21, 2023
+*  Gary Milne - March 22, 2023
 *
 **/
 
@@ -79,7 +80,7 @@ metadata {
         if (switchCount >= 7) { attribute "switch7", "string" ; command "Power7On" ; command "Power7Off" }
         if (switchCount >= 8) { attribute "switch8", "string" ; command "Power8On" ; command "Power8Off" }
             
-        if (switchCount >= 2 && showChildControls == true) { command "ChildrenCreate" ; command "ChildrenRemove" ; command "componentOn" ; command "componentOff" ; command "componentRefresh" ; command "updateChild"}
+        if (switchCount >= 2 && showChildControls == true) { command "childrenCreate" ; command "childrenRemove" ; command "componentOn" ; command "componentOff" ; command "componentRefresh" ; command "updateChild"}
             
         command "initialize"
         command "tasmotaInjectRule"
@@ -247,56 +248,63 @@ def clean(){
 //******
 //*********************************************************************************************************************************************************************
 
-def ChildrenCreate()
+def childrenCreate()
 {
-    log.debug "Creating"
+	// This will create child devices
+	log("childrenCreate", "Entering - Create Child Devices", 3)
+	
+    //Set a flag to indicate we are using child devices.
+	state.useChildDevices = true
 
     try {
         for (i in 1..switchCount) {
-           log.debug "Creating child device for ep"+i
+           log("childrenCreate", "Creating child device for ep"+i, 0)
            addChildDevice("hubitat", "Generic Component Switch", "${device.deviceNetworkId}-ep${i}",
               [completedSetup: true, label: "${device.displayName} (S${i})",
               isComponent: false, componentName: "ep$i", componentLabel: "Switch $i"])
         }
     } catch (e) {
-         log.debug "Didnt create children for some reason: ${e}"
+		log("childrenCreate", "Didn't create child devices for some reason: ${e}", -1)
     }
 }
 
-def ChildrenRemove()
+def childrenRemove()
 {
     // This will remove all child devices
-    log.debug "Removing Child Devices"
+	log("childrenRemove", "Entering - Removing Child Devices", 3)
+	
+	//Set a flag to indicate we are NOT using child devices.
+	state.useChildDevices = false
     try
     {
         getChildDevices()?.each
         {
             try
             {
-                        log.debug "Removing ${it.deviceNetworkId} child device"
+				log("childrenRemove", "Removing ${it.deviceNetworkId} child device", 0)
                 deleteChildDevice(it.deviceNetworkId)
             }
             catch (e)
             {
-                log.debug "Error deleting ${it.deviceNetworkId}, probably locked into a SmartApp: ${e}"
+				log("childrenRemove", "Error deleting ${it.deviceNetworkId}, probably locked into a SmartApp: ${e}", -1)
             }
         }
     }
     catch (err)
     {
-        log.debug "Either no child devices exist or there was an error finding child devices: ${err}"
+		log("childrenRemove", "Either no child devices exist or there was an error finding child devices: ${err}", -1)
     }
 }
 
 def componentOn(child)
 {
-    log.debug "Received child on request from ep"+child.deviceNetworkId.substring(child.deviceNetworkId.length()-1)
+	log("componentOn", "Received child on request from ep"+child.deviceNetworkId.substring(child.deviceNetworkId.length()-1), 0)
     "${"Power"+child.deviceNetworkId.substring(child.deviceNetworkId.length()-1)+"On"}"()
 }
 
 def componentOff(child)
 {
-    log.debug "Received child off request from ep"+child.deviceNetworkId.substring(child.deviceNetworkId.length()-1)
+	log("componentOff", "Received child off request from ep"+child.deviceNetworkId.substring(child.deviceNetworkId.length()-1), 0)
     "${"Power"+child.deviceNetworkId.substring(child.deviceNetworkId.length()-1)+"Off"}"()
 }
 
@@ -310,7 +318,9 @@ def updateChild(String ep, String status)
     //First update the parent
     if (ep==1) {ep_modified = ""} else {ep_modified = ep}
     sendEvent(name: "switch"+ep_modified, value: status, descriptionText: "The switch ${ep} has been turned ${status}", isStateChange: true)
-
+	
+	//Skip over child devices if they are not in use.
+	if (state.useChildDevices == false ) return
     //Now find and update the child
     def childName = device.deviceNetworkId+"-ep"+ep
     def curdevice = null
@@ -321,12 +331,12 @@ def updateChild(String ep, String status)
     }
     catch (e)
     {
-        log.debug "Failed to find child " + childName + " - exception ${e}"
+		log("updateChild", "Failed to find child " + childName + " - exception ${e}", -1)
     }
 
     if (curdevice == null)
     {
-        log.debug "Failed to find child called " + childName + " - exception ${e}"
+		log("updateChild", "Failed to find child " + childName + " - exception ${e}", -1)
     }
     else
     {
@@ -555,8 +565,6 @@ def hubitatResponse(body){
                     //We got the response we were looking for so we can actually change the state of the switch in the UI.
                     //If the switch is turned off then the power statistics must be zero. However, if TSync is enabled then it will fire a Sync anyway.
                     updateChild("1", ActionValue.toLowerCase())
-			  //This is a special case because "switch" and switch1" are synonymous. updateChild only handles the numbered switches so this line is required.
-			  sendEvent(name: "switch", value: ActionValue.toLowerCase(), descriptionText: "The switch has been turned ${ActionValue.toLowerCase()}", isStateChange: true )
                     } 
             else {
                 log("hubitatResponse","Power state failed to apply", -1)
