@@ -1685,7 +1685,7 @@ def componentRefresh(child)
 //It in turn turns the child devices to the appropriate state.
 def updateChild(String ep, String status)
 {
-    log.info ("ep is: ${ep} and status is: ${status}")
+    //log.info ("ep is: ${ep} and status is: ${status}")
     //If this is the first port we have to handle both the switch and switch1 attributes as though they are one.
     if (ep == "1") {
         sendEvent(name: "switch", value: status, descriptionText: "'switch' has been turned ${status}", isStateChange: true)
