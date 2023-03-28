@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync N Port Relay\Switch\Plug Driver with PM
-*  Version: v1.3.1
+*  Version: v1.3.2
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota N Port Relay\Switch\Plug with\without Power Monitoring. Provides Realtime and native synchronization between Hubitat and Tasmota.
 *  The N port version handles any number of switches from 1 to 8. The SINGLE, DUAL, TRIPLE, QUAD and EIGHT port relay/switch/plug are all simply copies of this driver with the following adjustment.
@@ -32,7 +32,8 @@
 *  Version 1.2.4 - Incremented Core 0.98.3
 *  Version 1.2.5 - Added some logic (powerEnabled) so the driver could easily be configured to not list any power attributes or capabilities.
 *  Version 1.3.0 - Added GitHub request from @chcharles to allow for the creation of child devices when more than 1 relay is present (very clever!!). Also includes a few minor adjustments from github. Incremented Core 0.98.3
-*  Version 1.3.1 - Added flag for when child devices are in use.  Converted all logging in child device code to use the log function with appropriate loglevel. 
+*  Version 1.3.1 - Added flag for when child devices are in use. Converted all logging in child device code to use the log function with appropriate loglevel. 
+*  Version 1.3.2 - Fixed bug in handling of single relay devices. Left 'test()' function enabled to allow correct setting of "useChildDevices" to be set on existing installed devices. Incremented Core to 0.98.4.
 *
 *  Authors Notes:
 *  For more information on Tasmota Sync drivers check out these resources:
@@ -40,7 +41,7 @@
 *  How to upgrade from Tasmota 8.X to Tasmota 11.X  https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/How%20to%20Upgrade%20from%20Tasmota%20from%208.X%20to%2011.X.pdf
 *  Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 *
-*  Gary Milne - March 22, 2023
+*  Gary Milne - March 28, 2023
 *
 **/
 
@@ -49,8 +50,6 @@ import groovy.json.JsonSlurper
 
 //This determines the number of switches that will appear within the device. If the switchCount is greater than 2 then power monitoring option is no longer visible in settings.
 @Field static final Integer switchCount = 1
-//This determines whether the commands associated with the use of child devices will be visible. Default is true, if changed to false it will get overwritten when accepting HPM updates.
-@Field static final boolean showChildControls = true
 
 metadata {
         definition (name: "Tasmota Sync - Single Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy", singleThreaded: true )  {
@@ -62,16 +61,16 @@ metadata {
         capability "Refresh"
             
         //Driver specific variables where case does not matter.
-            attribute "Status", "string" 
+        attribute "Status", "string" 
         
         //Allow Power Monitoring for Plugs with 2 or less switches
-          if (switchCount <= 2) { capability "PowerMeter" ; capability "CurrentMeter" ; capability "EnergyMeter" ; capability "VoltageMeasurement"                                   
+        if (switchCount <= 2) { capability "PowerMeter" ; capability "CurrentMeter" ; capability "EnergyMeter" ; capability "VoltageMeasurement"                                   
             attribute "current", "number" ; attribute "power", "number" ; attribute "voltage", "number" ; attribute "apparentPower", "number" ; attribute "energyToday", "number" ;
             attribute "energyTotal", "number" ; attribute "energyYesterday", "number" ; attribute "powerFactor", "number" ; "number" ; attribute "reactivePower", "number"
             }
             
         //log.debug ("SwitchCount is: ${switchCount}")
-        if (switchCount >= 1) { attribute "switch",  "string" ; command "Power1On" ; command "Power1Off" }
+        if (switchCount >= 1) { attribute "switch",  "string" ; attribute "switch1", "string" ; command "Power1On" ; command "Power1Off" }
         if (switchCount >= 2) { attribute "switch2", "string" ; command "Power2On" ; command "Power2Off" }
         if (switchCount >= 3) { attribute "switch3", "string" ; command "Power3On" ; command "Power3Off" }
         if (switchCount >= 4) { attribute "switch4", "string" ; command "Power4On" ; command "Power4Off" }
@@ -80,14 +79,14 @@ metadata {
         if (switchCount >= 7) { attribute "switch7", "string" ; command "Power7On" ; command "Power7Off" }
         if (switchCount >= 8) { attribute "switch8", "string" ; command "Power8On" ; command "Power8Off" }
             
-        if (switchCount >= 2 && showChildControls == true) { command "childrenCreate" ; command "childrenRemove" ; command "componentOn" ; command "componentOff" ; command "componentRefresh" ; command "updateChild"}
+        if (switchCount >= 2){ command "childrenCreate" ; command "childrenRemove"}
             
         command "initialize"
         command "tasmotaInjectRule"
         command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "An optional single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
         command "tasmotaTelePeriod", [ [name:"Seconds*", type: "STRING", description: "The number of seconds between Tasmota sensor updates (TelePeriod XX)."] ]
         command "toggle"
-        //command "test"
+        command "test"
     }
     
     section("Configure the Inputs"){
@@ -114,7 +113,10 @@ metadata {
 
 //Function used for quickly testing out logic and cleaning up.
 def test(){
-    
+   //Set a flag to indicate we are using child devices.
+    if ( state.useChildDevices == true ) state.useChildDevices = false
+    else state.useChildDevices = true
+	
 }
 
 
@@ -315,10 +317,13 @@ def componentRefresh(child)
 
 def updateChild(String ep, String status)
 {
-    //First update the parent
-    if (ep==1) {ep_modified = ""} else {ep_modified = ep}
-    sendEvent(name: "switch"+ep_modified, value: status, descriptionText: "The switch ${ep} has been turned ${status}", isStateChange: true)
-	
+    //If this is the first port we have to handle both the switch and switch1 attributes as though they are one.
+    if (ep == "1") {
+        sendEvent(name: "switch", value: status, descriptionText: "'switch' has been turned ${status}", isStateChange: true)
+        sendEvent(name: "switch1", value: status, descriptionText: "'switch${ep}' has been turned ${status}", isStateChange: false)
+        }
+    else sendEvent(name: "switch"+ep, value: status, descriptionText: "The switch ${ep} has been turned ${status}", isStateChange: true)
+        
 	//Skip over child devices if they are not in use.
 	if (state.useChildDevices == false ) return
     //Now find and update the child
@@ -704,6 +709,9 @@ def hubitatResponse(body){
                 //"HSBColor":"248,84,0","White":68,"CT":500,"Channel":[0,0,0,0,68],"Scheme":0,"Fade":"OFF","Speed":20,"LedTable":"ON","Wifi":{"AP":1,"SSId":"5441","BSSId":"A0:04:60:95:0E:62","Channel":6,"Mode":"11n",
                 //"RSSI":100,"Signal":-47,"LinkCount":1,"Downtime":"0T00:00:06"}}
                 log ("hubitatResponse","Setting device handler values to match device.", 0)
+                //if ( switchCount == 1 ){
+                  //  if (body?.POWER || body?.POWER1) sendEvent(name: "switch",  value: body.POWER.toLowerCase(), displayed:false) ; sendEvent(name: "switch1",  value: body.POWER.toLowerCase(), displayed:false)
+                //}
                 if (body?.POWER)  updateChild("1", body.POWER.toLowerCase())
                 if (body?.POWER1) updateChild("1", body.POWER1.toLowerCase())
                 if (body?.POWER2) updateChild("2", body.POWER2.toLowerCase())
@@ -1040,6 +1048,7 @@ def tasmotaInjectRule(){
 *  Version 0.98.1 - Added a "warning" category and label to the logging section.
 *  Version 0.98.2 - Added a "tooltip" function into the HTML area. Not yet being used.
 *  Version 0.98.3 - Added some minor additions to support GitHub changes.
+*  Version 0.98.4 - Added state.useChildDevices = false to the installed() function in support of child device configuration.
 *
 */
 
@@ -1051,6 +1060,7 @@ def tasmotaInjectRule(){
 
 //Installed gets run when the device driver is selected and saved
 def installed(){
+    state.useChildDevices = false
     log ("Installed", "Installed with settings: ${settings}", 0)
 }
 
