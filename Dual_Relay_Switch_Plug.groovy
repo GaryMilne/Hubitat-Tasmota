@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync N Port Relay\Switch\Plug Driver with PM
-*  Version: v1.3.2
+*  Version: v1.3.3
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota N Port Relay\Switch\Plug with\without Power Monitoring. Provides Realtime and native synchronization between Hubitat and Tasmota.
 *  The N port version handles any number of switches from 1 to 8. The SINGLE, DUAL, TRIPLE, QUAD and EIGHT port relay/switch/plug are all simply copies of this driver with the following adjustment.
@@ -33,7 +33,8 @@
 *  Version 1.2.5 - Added some logic (powerEnabled) so the driver could easily be configured to not list any power attributes or capabilities.
 *  Version 1.3.0 - Added GitHub request from @chcharles to allow for the creation of child devices when more than 1 relay is present (very clever!!). Also includes a few minor adjustments from github. Incremented Core 0.98.3
 *  Version 1.3.1 - Added flag for when child devices are in use. Converted all logging in child device code to use the log function with appropriate loglevel. 
-*  Version 1.3.2 - Fixed bug in handling of single relay devices. Left 'test()' function enabled to allow correct setting of "useChildDevices" to be set on existing installed devices. Incremented Core to 0.98.4.
+*  Version 1.3.2 - Fixed bug in state handling of some relay devices. Left 'test()' function enabled to allow correct setting of "useChildDevices" to be set on existing installed devices. Incremented Core to 0.98.4. 
+*  Version 1.3.3 - Moved all Child Device code to core. Incremented Core to 0.98.4
 *
 *  Authors Notes:
 *  For more information on Tasmota Sync drivers check out these resources:
@@ -160,7 +161,8 @@ def initialize(){
     if ( device.currentValue("Status") == null ) updateStatus("Complete")  
     
     //If the number of switches is greater than 2 then the relayType is set to Simple with no PM. I'm not aware of any PM switches with greater than 2 ports.
-    if (switchCount > 2) device.updateSetting("relayType", [value:"0", type:"enum"])
+    //if (switchCount > 2) device.updateSetting("relayType", [value:"0", type:"enum"])
+    device.updateSetting("relayType", [value:"0", type:"enum"])
     
     //Simple switch - no PM
     if (settings.relayType.toInteger() == 0 ) {
@@ -242,11 +244,9 @@ def clean(){
 //******
 //*********************************************************************************************************************************************************************
 
-
-
 //*********************************************************************************************************************************************************************
 //******
-//****** UNIQUE: Start of Power related functions. These may be UNIQUE across all Tasmota Sync drivers
+//****** UNIQUE: Start of functions related to the use of Child Devices. These are only used within relay devices and are not present in devices like bulbs or fans.
 //******
 //*********************************************************************************************************************************************************************
 
@@ -317,6 +317,7 @@ def componentRefresh(child)
 
 def updateChild(String ep, String status)
 {
+    log.info ("ep is: ${ep} and status is: ${status}")
     //If this is the first port we have to handle both the switch and switch1 attributes as though they are one.
     if (ep == "1") {
         sendEvent(name: "switch", value: status, descriptionText: "'switch' has been turned ${status}", isStateChange: true)
@@ -326,7 +327,8 @@ def updateChild(String ep, String status)
         
 	//Skip over child devices if they are not in use.
 	if (state.useChildDevices == false ) return
-    //Now find and update the child
+    
+    //Otherwise we are using child devices so we must set the state for that also.
     def childName = device.deviceNetworkId+"-ep"+ep
     def curdevice = null
     try
@@ -348,6 +350,12 @@ def updateChild(String ep, String status)
         curdevice?.sendEvent(name: "switch", value: status)
     }
 }
+
+//*********************************************************************************************************************************************************************
+//******
+//****** UNIQUE: Start of Power related functions. These may be UNIQUE across all Tasmota Sync drivers
+//******
+//*********************************************************************************************************************************************************************
 
 //Turns the Power on to one or all switches based on settings. Note: Power and Power1 are synonymous in Tasmota
 def on() {
@@ -774,7 +782,7 @@ def syncTasmota(body){
         //Now parse into JSON to extract data.
         body = parseJson(body)
         
-        //Preset the values for when the %vars% are empty
+        //Preset the values for when the %vars% are empty. TSYNC switch data comes back as SWITCH1....SWITCH8 as neccessary.
         switch1 = -1 ; switch2 = -1 ; switch3 = -1 ; switch4 = -1 ; switch5 = -1 ; switch6 = -1 ; switch7 = -1 ; switch8 = -1 
         current = -1 ; voltage = -1 ; power = -1 ; apparentPower = -1 ; energyToday = -1 ; energyTotal = -1 ; energyYesterday = -1 ; powerFactor = -1 ;  reactivePower = -1
         
@@ -799,23 +807,23 @@ def syncTasmota(body){
         if (body?.SWITCH7 != '') { switch7 = body?.SWITCH7 ; log ("syncTasmota","Switch 7 is: ${switch7}", 2) }
         if (body?.SWITCH8 != '') { switch8 = body?.SWITCH8 ; log ("syncTasmota","Switch 8 is: ${switch8}", 2) }
         
-        //Now apply any changes that have been found. In Tasmota, "power" is the switch state unless referring to sensor data.
-        if ( switch1?.toInteger() == 0 ) {sendEvent(name: "switch", value: "off", descriptionText: "Switch was turned off.") ; updateChild("1","off")}
-        if ( switch1?.toInteger() == 1 ) {sendEvent(name: "switch", value: "on", descriptionText: "Switch was turned on.") ; updateChild("1","on")}
-        if ( switch2?.toInteger() == 0 ) {sendEvent(name: "switch", value: "off", descriptionText: "Switch was turned off.") ; updateChild("2","off")}
-        if ( switch2?.toInteger() == 1 ) {sendEvent(name: "switch", value: "on", descriptionText: "Switch was turned on.") ; updateChild("2","on")}
-        if ( switch3?.toInteger() == 0 ) {sendEvent(name: "switch", value: "off", descriptionText: "Switch was turned off.") ; updateChild("3","off")}
-        if ( switch3?.toInteger() == 1 ) {sendEvent(name: "switch", value: "on", descriptionText: "Switch was turned on.") ; updateChild("3","on")}
-        if ( switch4?.toInteger() == 0 ) {sendEvent(name: "switch", value: "off", descriptionText: "Switch was turned off.") ; updateChild("4","off")}
-        if ( switch4?.toInteger() == 1 ) {sendEvent(name: "switch", value: "on", descriptionText: "Switch was turned on.") ; updateChild("4","on")}
-        if ( switch5?.toInteger() == 0 ) {sendEvent(name: "switch", value: "off", descriptionText: "Switch was turned off.") ; updateChild("5","off")}
-        if ( switch5?.toInteger() == 1 ) {sendEvent(name: "switch", value: "on", descriptionText: "Switch was turned on.") ; updateChild("5","on")}
-        if ( switch6?.toInteger() == 0 ) {sendEvent(name: "switch", value: "off", descriptionText: "Switch was turned off.") ; updateChild("6","off")}
-        if ( switch6?.toInteger() == 1 ) {sendEvent(name: "switch", value: "on", descriptionText: "Switch was turned on.") ; updateChild("6","on")}
-        if ( switch7?.toInteger() == 0 ) {sendEvent(name: "switch", value: "off", descriptionText: "Switch was turned off.") ; updateChild("7","off")}
-        if ( switch7?.toInteger() == 1 ) {sendEvent(name: "switch", value: "on", descriptionText: "Switch was turned on.") ; updateChild("7","on")}
-        if ( switch8?.toInteger() == 0 ) {sendEvent(name: "switch", value: "off", descriptionText: "Switch was turned off.") ; updateChild("8","off")}
-        if ( switch8?.toInteger() == 1 ) {sendEvent(name: "switch", value: "on", descriptionText: "Switch was turned on.") ; updateChild("8","on")}
+        //Now apply any changes that have been found in the switch states.
+        if ( switch1?.toInteger() == 0 ) updateChild("1","off")
+        if ( switch1?.toInteger() == 1 ) updateChild("1","on")
+        if ( switch2?.toInteger() == 0 ) updateChild("2","off")
+        if ( switch2?.toInteger() == 1 ) updateChild("2","on")
+        if ( switch3?.toInteger() == 0 ) updateChild("3","off")
+        if ( switch3?.toInteger() == 1 ) updateChild("3","on")
+        if ( switch4?.toInteger() == 0 ) updateChild("4","off")
+        if ( switch4?.toInteger() == 1 ) updateChild("4","on")
+        if ( switch5?.toInteger() == 0 ) updateChild("5","off")
+        if ( switch5?.toInteger() == 1 ) updateChild("5","on")
+        if ( switch6?.toInteger() == 0 ) updateChild("6","off")
+        if ( switch6?.toInteger() == 1 ) updateChild("6","on")
+        if ( switch7?.toInteger() == 0 ) updateChild("7","off")
+        if ( switch7?.toInteger() == 1 ) updateChild("7","on")
+        if ( switch8?.toInteger() == 0 ) updateChild("8","off")
+        if ( switch8?.toInteger() == 1 ) updateChild("8","on")
 
         //Send Wattage information if configured. Ignore anything less than 0.
         if (settings?.relayType.toInteger() >= 1 ){ 
@@ -1049,6 +1057,7 @@ def tasmotaInjectRule(){
 *  Version 0.98.2 - Added a "tooltip" function into the HTML area. Not yet being used.
 *  Version 0.98.3 - Added some minor additions to support GitHub changes.
 *  Version 0.98.4 - Added state.useChildDevices = false to the installed() function in support of child device configuration.
+*  Version 0.98.5 - Moved all code relating to the use of child devices into Core. 
 *
 */
 
@@ -1703,6 +1712,124 @@ void toggle() {
 //******
 //*********************************************************************************************************************************************************************
 
+
+
+//*********************************************************************************************************************************************************************
+//******
+//****** STANDARD: Start of Child Device management functions - These functions are IDENTICAL across all Tasmota Sync drivers where present
+//******
+//*********************************************************************************************************************************************************************
+
+//Creates child devices for use in multi-relay devices.
+def childrenCreate()
+{
+	// This will create child devices
+	log("childrenCreate", "Entering - Create Child Devices", 3)
+	
+    //Set a flag to indicate we are using child devices.
+	state.useChildDevices = true
+
+    try {
+        for (i in 1..switchCount) {
+           log("childrenCreate", "Creating child device for ep"+i, 0)
+           addChildDevice("hubitat", "Generic Component Switch", "${device.deviceNetworkId}-ep${i}",
+              [completedSetup: true, label: "${device.displayName} (S${i})",
+              isComponent: false, componentName: "ep$i", componentLabel: "Switch $i"])
+        }
+    } catch (e) {
+		log("childrenCreate", "Didn't create child devices for some reason: ${e}", -1)
+    }
+}
+
+//Removes child devices in multi-relay devices.
+def childrenRemove()
+{
+    // This will remove all child devices
+	log("childrenRemove", "Entering - Removing Child Devices", 3)
+	
+	//Set a flag to indicate we are NOT using child devices.
+	state.useChildDevices = false
+    try
+    {
+        getChildDevices()?.each
+        {
+            try
+            {
+				log("childrenRemove", "Removing ${it.deviceNetworkId} child device", 0)
+                deleteChildDevice(it.deviceNetworkId)
+            }
+            catch (e)
+            {
+				log("childrenRemove", "Error deleting ${it.deviceNetworkId}, probably locked into a SmartApp: ${e}", -1)
+            }
+        }
+    }
+    catch (err)
+    {
+		log("childrenRemove", "Either no child devices exist or there was an error finding child devices: ${err}", -1)
+    }
+}
+
+def componentOn(child)
+{
+	log("componentOn", "Received child on request from ep"+child.deviceNetworkId.substring(child.deviceNetworkId.length()-1), 0)
+    "${"Power"+child.deviceNetworkId.substring(child.deviceNetworkId.length()-1)+"On"}"()
+}
+
+def componentOff(child)
+{
+	log("componentOff", "Received child off request from ep"+child.deviceNetworkId.substring(child.deviceNetworkId.length()-1), 0)
+    "${"Power"+child.deviceNetworkId.substring(child.deviceNetworkId.length()-1)+"Off"}"()
+}
+
+def componentRefresh(child)
+{
+    refresh()
+}
+
+//This function is called to change switch states regardless of whether child devices are present or not.
+//It in turn turns the child devices to the appropriate state.
+def updateChild(String ep, String status)
+{
+    log.info ("ep is: ${ep} and status is: ${status}")
+    //If this is the first port we have to handle both the switch and switch1 attributes as though they are one.
+    if (ep == "1") {
+        sendEvent(name: "switch", value: status, descriptionText: "'switch' has been turned ${status}", isStateChange: true)
+        sendEvent(name: "switch1", value: status, descriptionText: "'switch${ep}' has been turned ${status}", isStateChange: false)
+        }
+    else sendEvent(name: "switch"+ep, value: status, descriptionText: "The switch ${ep} has been turned ${status}", isStateChange: true)
+        
+	//Skip over child devices if they are not in use.
+	if (state.useChildDevices == false ) return
+    
+    //Otherwise we are using child devices so we must set the state for that also.
+    def childName = device.deviceNetworkId+"-ep"+ep
+    def curdevice = null
+    try
+    {
+        // Got a zone status so first try to find the correct child device
+        curdevice = getChildDevices()?.find { it.deviceNetworkId == childName }
+    }
+    catch (e)
+    {
+		log("updateChild", "Failed to find child " + childName + " - exception ${e}", -1)
+    }
+
+    if (curdevice == null)
+    {
+		log("updateChild", "Failed to find child " + childName + " - exception ${e}", -1)
+    }
+    else
+    {
+        curdevice?.sendEvent(name: "switch", value: status)
+    }
+}
+
+//*********************************************************************************************************************************************************************
+//******
+//****** End of Child Device management functions
+//******
+//*********************************************************************************************************************************************************************
 
 
 //*********************************************************************************************************************************************************************
