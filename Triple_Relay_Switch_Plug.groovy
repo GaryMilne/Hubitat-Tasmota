@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync N Port Relay\Switch\Plug Driver with PM
-*  Version: v1.3.3
+*  Version: v1.3.4
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota N Port Relay\Switch\Plug with\without Power Monitoring. Provides Realtime and native synchronization between Hubitat and Tasmota.
 *  The N port version handles any number of switches from 1 to 8. The SINGLE, DUAL, TRIPLE, QUAD and EIGHT port relay/switch/plug are all simply copies of this driver with the following adjustment.
@@ -34,7 +34,8 @@
 *  Version 1.3.0 - Added GitHub request from @chcharles to allow for the creation of child devices when more than 1 relay is present (very clever!!). Also includes a few minor adjustments from github. Incremented Core 0.98.3
 *  Version 1.3.1 - Added flag for when child devices are in use. Converted all logging in child device code to use the log function with appropriate loglevel. 
 *  Version 1.3.2 - Fixed bug in state handling of some relay devices. Left 'test()' function enabled to allow correct setting of "useChildDevices" to be set on existing installed devices. Incremented Core to 0.98.4. 
-*  Version 1.3.3 - Moved all Child Device code to core. Incremented Core to 0.98.4
+*  Version 1.3.3 - Moved all Child Device code to core. Incremented Core to 0.98.5
+*  Version 1.3.4 - Fixed bug introduced in the 1.3.X timeframe whereby selection of a different relayType was not possible. Added clearing of "energy" stat.
 *
 *  Authors Notes:
 *  For more information on Tasmota Sync drivers check out these resources:
@@ -42,7 +43,7 @@
 *  How to upgrade from Tasmota 8.X to Tasmota 11.X  https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/How%20to%20Upgrade%20from%20Tasmota%20from%208.X%20to%2011.X.pdf
 *  Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 *
-*  Gary Milne - March 28, 2023
+*  Gary Milne - March 31, 2023
 *
 **/
 
@@ -161,8 +162,7 @@ def initialize(){
     if ( device.currentValue("Status") == null ) updateStatus("Complete")  
     
     //If the number of switches is greater than 2 then the relayType is set to Simple with no PM. I'm not aware of any PM switches with greater than 2 ports.
-    //if (switchCount > 2) device.updateSetting("relayType", [value:"0", type:"enum"])
-    device.updateSetting("relayType", [value:"0", type:"enum"])
+    if (switchCount > 2) device.updateSetting("relayType", [value:"0", type:"enum"])
     
     //Simple switch - no PM
     if (settings.relayType.toInteger() == 0 ) {
@@ -172,6 +172,7 @@ def initialize(){
         device.deleteCurrentState("voltage")
         device.deleteCurrentState("power")
         device.deleteCurrentState("apparentPower")
+		device.deleteCurrentState("energy")
         device.deleteCurrentState("energyToday")
         device.deleteCurrentState("energyTotal")
         device.deleteCurrentState("energyYesterday")
@@ -187,6 +188,7 @@ def initialize(){
         device.deleteCurrentState("current")
         device.deleteCurrentState("voltage")
         device.deleteCurrentState("apparentPower")
+		device.deleteCurrentState("energy")
         device.deleteCurrentState("energyToday")
         device.deleteCurrentState("energyTotal")
         device.deleteCurrentState("energyYesterday")
@@ -202,6 +204,7 @@ def initialize(){
         if ( device.currentValue("voltage") == null ) sendEvent(name: "voltage", value: 0, descriptionText: "Voltage events have been enabled", unit: "Volts", isStateChange: true )
         if ( device.currentValue("power") == null ) sendEvent(name: "power", value: 0, descriptionText: "Power (watts) events have been enabled", unit: "Watts", isStateChange: true )
         device.deleteCurrentState("apparentPower")
+		device.deleteCurrentState("energy")
         device.deleteCurrentState("energyToday")
         device.deleteCurrentState("energyTotal")
         device.deleteCurrentState("energyYesterday")
