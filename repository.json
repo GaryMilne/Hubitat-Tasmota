@@ -24,6 +24,16 @@
 				"Temperature & Humidity",
 				"Water"
 			]
+		},
+		{
+			"name": "Tile Builder for Hubitat",
+			"category": "Dashboards",
+			"location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-TileBuilder/main/packageManifestTileBuilder.json",
+			"description": "Create dashboard tiles that are highly customizable and can contain data from multiple devices.",
+			"tags": [
+				"Dashboard",
+				"Utilities"
+			]
 		}
 	]
 }

@@ -1,8 +1,8 @@
 /**
-*  Tasmota Sync N Port Relay\Switch\Plug Driver with PM
-*  Version: v1.2.3
+*  Tasmota Sync N Port Relay\Switch\Plug Driver with\without PM
+*  Version: v1.2.5
 *  Download: See importUrl in definition
-*  Description: Hubitat Driver for Tasmota N Port Relay\Switch\Plug with Power Monitoring. Provides Realtime and native synchronization between Hubitat and Tasmota.
+*  Description: Hubitat Driver for Tasmota N Port Relay\Switch\Plug with\without Power Monitoring. Provides Realtime and native synchronization between Hubitat and Tasmota.
 *  The N port version handles any number of switches from 1 to 8. The SINGLE, DUAL, TRIPLE, QUAD and EIGHT port relay/switch/plug are all simply copies of this driver with the following adjustment.
 *  1) edit line @Field static final Integer switchCount = ?  to reflect correct switchcount
 *  2) definition - Uncomment the appropriate definition.
@@ -30,6 +30,8 @@
 *  Version 1.2.2 - Fixed bug for POWER values received by TasmotaSync not being recorded properly
 *  Version 1.2.2 - Fixed bug for POWER values received by TasmotaSync not being recorded properly
 *  Version 1.2.3 - Restored missing Toggle command option. Added option to display\track all Tasmota Energy events
+*  Version 1.2.4 - Incremented Core 0.98.2. Fixed "DIMMER" code with improved version from Dimmer implementation.
+*  Version 1.2.5 - Added some logic (powerEnabled) so the driver could easily be configured to not list any power attributes or capabilities.
 *
 *  Authors Notes:
 *  For more information on Tasmota Sync drivers check out these resources:
@@ -37,30 +39,34 @@
 *  How to upgrade from Tasmota 8.X to Tasmota 11.X  https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/How%20to%20Upgrade%20from%20Tasmota%20from%208.X%20to%2011.X.pdf
 *  Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 *
-*  Gary Milne - June 5th, 2022
+*  Gary Milne - Nov 19th, 2022
 *
 **/
 
 import groovy.transform.Field
 import groovy.json.JsonSlurper
 
-//This determines the number of switches that will appear within the device. If the switchCount is greater than 2 then power monitoring option is no longer visible in settings.
-@Field static final Integer switchCount = 2
+//This determines the number of switches that will appear within the device. If the switchCount is greater than 2 or powerEnabled == false then power monitoring option is no longer visible in settings regardless of switchCount.
+//The powerEnabled setting also controls which capabilities are configured for the device which determines whether the device will show up in the capability selector.
+@Field static final Integer switchCount = 1
+@Field static final boolean powerEnabled = true
 
 metadata {
-	    //definition (name: "Tasmota Sync - Single Relay/Switch/Plug with PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy", singleThreaded: true )  {
-        definition (name: "Tasmota Sync - Dual Relay/Switch/Plug with PM - Test", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug_Test.groovy", singleThreaded: true )  {
+	definition (name: "Tasmota Sync - Single Relay/Switch/Plug PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug_PM.groovy", singleThreaded: true )  {
+        //definition (name: "Tasmota Sync - Dual Relay/Switch/Plug PM", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug_PM.groovy", singleThreaded: true )  {
+        //definition (name: "Tasmota Sync - Single Relay/Switch/Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy", singleThreaded: true )  {
+        //definition (name: "Tasmota Sync - Dual Relay/Switch/Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         //definition (name: "Tasmota Sync - Triple Relay/Switch/Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Triple_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         //definition (name: "Tasmota Sync - Quad Relay/Switch/Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Quad_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         //definition (name: "Tasmota Sync - Eight Relay/Switch/Plug", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Eight_Relay_Switch_Plug.groovy", singleThreaded: true )  {
         capability "Switch"
         capability "Refresh"
-            
+        
         //Driver specific variables where case does not matter.
         attribute "Status", "string" 
         
         //Allow Power Monitoring for Plugs with 2 or less switches
-        if (switchCount <= 2) { capability "PowerMeter" ; capability "CurrentMeter" ; capability "EnergyMeter" ; capability "VoltageMeasurement"                                   
+        if (switchCount <= 2 && powerEnabled == true) { capability "PowerMeter" ; capability "CurrentMeter" ; capability "VoltageMeasurement"                                   
             attribute "current", "number" ; attribute "power", "number" ; attribute "voltage", "number" ; attribute "apparentPower", "number" ; attribute "energyToday", "number" ;
             attribute "energyTotal", "number" ; attribute "energyYesterday", "number" ; attribute "powerFactor", "number" ; "number" ; attribute "reactivePower", "number"
             }
@@ -80,13 +86,13 @@ metadata {
         command "tasmotaCustomCommand", [ [name:"Command*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "An optional single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
         command "tasmotaTelePeriod", [ [name:"Seconds*", type: "STRING", description: "The number of seconds between Tasmota sensor updates (TelePeriod XX)."] ]
         command "toggle"
-        command "test"
+        //command "test"
 	}
     
     section("Configure the Inputs"){
 			input name: "destIP", type: "text", title: bold(dodgerBlue("Tasmota Device IP Address")), description: italic("The IP address of the Tasmota device."), defaultValue: "192.168.0.X", required:true, displayDuringSetup: true
             input name: "HubIP", type: "text", title: bold(dodgerBlue("Hubitat Hub IP Address")), description: italic("The Hubitat Hub Address. Used by Tasmota rules to send HTTP responses."), defaultValue: "192.168.0.X", required:true, displayDuringSetup: true
-            if (switchCount <= 2) {    
+            if (switchCount <= 2 && powerEnabled == true) {    
                 input name: "relayType", type: "enum", title: bold(dodgerBlue("Type: Simple Plug - Plug (W) - Plug (W,V,A) - Plug (All Tasmota Energy Stats)")),description: italic("A Tasmota device that reports data can generate a lot of events, especially if the Tasmota TelePeriod is a low value. This setting will reduce the amount of data being recorded by ignoring non-essential changes. ") + underline("Note: A change in plug type requires re-installation of RULE3 for proper function."),
                     options: [[0:"Simple Plug. Log ONLY switch events. (Default)"], [1:"Plug with Power Monitoring. Log ONLY Switch and Power events."],[2:"Plug with Power Monitoring. Log ONLY Switch, Power, Current and Voltage events"],[3:"Plug with Power Monitoring. Log ALL Switch and Tasmota Energy stats"]], defaultValue: 0, required:true
             }
@@ -107,53 +113,10 @@ metadata {
 
 //Function used for quickly testing out logic and cleaning up.
 def test(){
-    log ("parse", "Entering, data received.", 0)
     
-    int duration = 1000
-    LanMessage="mac:DC4F22F35C73, ip:c0a80070, port:e01d, headers:UE9TVCAvIEhUVFAvMS4xDQpVc2VyLUFnZW50OiBFU1A4MjY2SFRUUENsaWVudA0KQ29ubmVjdGlvbjoga2VlcC1hbGl2ZQ0KSG9zdDogMTkyLjE2OC4wLjIwMDozOTUwMQ0KQWNjZXB0LUVuY29kaW5nOiBpZGVudGl0eTtxPTEsY2h1bmtlZDtxPTAuMSwqO3E9MA0KQ29udGVudC1MZW5ndGg6IDQ0DQo=, body:eydUU3luYyc6J1RydWUnLCdTV0lUQ0gxJzonMCcsJ1NXSVRDSDInOicxJ30="
-    
-    pauseExecution (duration)
-    log ("parse","data is ${LanMessage}", 0)
-    pauseExecution (duration)
-    
-    def msg = parseLanMessage(LanMessage)
-    pauseExecution (duration)
-    def body = msg.body
-    pauseExecution (duration)
-    log ("parse","body is ${body}", 0)
-    pauseExecution (duration)
-    state.lastMessage = state.thisMessage
-    pauseExecution (duration)
-    state.thisMessage = msg.body       
-    pauseExecution (duration)
-    
- 	//TSync message use single quotes and must be cleaned up to be handled as JSON later
-	body = body?.replace("'","\"") 
-    log ("parse","JSON converted body is ${body}", 0)
-    pauseExecution (duration)
-	
-    //Convert all the contents to upper case for consistency
-	body = body?.toUpperCase()
-    log ("parse","Uppercase converted body is ${body}", 0)
-    pauseExecution (duration)
-    
-    //Search body for the word STATUS while it is still in string form
-	StatusSync = false
-    pauseExecution (duration)
-	if (body.contains("STATUS")==true ) StatusSync = true
-    pauseExecution (duration)
-	log ("parse","StatusSync is: ${StatusSync}.", 0)
-    pauseExecution (duration)
-
-	//Search body for the word TSYNC while it is still in string form
-	TSync = false
-    pauseExecution (duration)
-	if (body.contains("TSYNC")==true ) TSync = true
-    pauseExecution (duration)
-	log ("parse","TSync is: ${TSync}.", 0)
-    pauseExecution (duration)
-    log ("parse","Test Finished", 0)
 }
+
+
 
 
 //*********************************************************************************************************************************************
@@ -964,6 +927,8 @@ def tasmotaInjectRule(){
 *  Version 0.96C - Added handling for Tasmota "WARNING" message that occurs when authentication fails and possibly other scenarios.
 *  Version 0.97 - Added option in settings to disable use of HTML enhancements in logging. These do not show correctly on a secondary hub in a two+ hub environment. This option allows them to be disabled.
 *  Version 0.98.0 - Changed versioning to comply with Semantic Versioning standards (https://semver.org/). Moved CORE changelog to beginning of CORE section.
+*  Version 0.98.1 - Added a "warning" category and label to the logging section.
+*  Version 0.98.2 - Added a "tooltip" function into the HTML area. Not yet being used.
 *
 */
 
@@ -1221,7 +1186,7 @@ private log(name, message, int loglevel){
     }
      
     //These will be the default icons for the primary functions. Others that may be useful in future ☎️ 📜 👎 👍 🔂 🎬 ⚰️ 🚪 💣
-    if (name.toString().toUpperCase().contains("CALLTASMOTA")==true ) icon2 = "📞 "  
+    if (name.toString().toUpperCase().contains("CALLTASMOTA")==true ) icon2 = "📞 "
     if (name.toString().toUpperCase().contains("ACTION")==true ) icon2 = "⚡ "
     if (name.toString().toUpperCase().contains("DELETE")==true ) icon2 = "🗑️ "
     if (name.toString().toUpperCase().contains("SAVE")==true ) icon2 = "💾 "
@@ -1230,6 +1195,7 @@ private log(name, message, int loglevel){
     //These will ovverride the secondary icons Keyword search and icon replacement. Obviously icon2 may get overwritten so order is important.
     if (message.toString().toUpperCase().contains("APPLIED SUCCESSFULLY")==true ) icon2 = "⭐ "
     if (message.toString().toUpperCase().contains("FAILED TO APPLY")==true ) icon2 = "💩 "
+    if (message.toString().toUpperCase().contains("WARNING")==true ) icon2 = "🚩 "
     
     if (message.toString().toUpperCase().contains("ENTER")==true ) icon2 = "🏁 "
     if (message.toString().toUpperCase().contains("FINISH")==true ) icon3 = "🛑 "
@@ -1344,6 +1310,19 @@ String dimGray(s) { return '<font color = "DimGray">' + s + '</font>'}
 String slateGray(s) { return '<font color = "SlateGray">' + s + '</font>'}
 String black(s) { return '<font color = "Black">' + s + '</font>'}
 
+
+//This does not work fully yet but I'm leaving it here as I hope to get this working at some point and the basic code does work to show a tooltip.
+def tooltip (String message) {
+s = '<style> .tooltip { position: relative; display: inline-block; border-bottom: 1px dotted black; }'
+s = s + '.tooltip .tooltiptext { visibility: hidden; width: 120px; background-color:lightsalmon; background-color: black; color: #fff; text-align: center; padding: 5px 0; border-radius: 6px; position: absolute; z-index: 1; } '
+s = s + '.tooltip:hover .tooltiptext { visibility: visible; background-color:lightsalmon; } </style>'
+s = s + '<div class="tooltip">Help..<span class="tooltiptext">YYYYY</span> </div>'
+s = s.replace("YYYYY", message) 
+return s
+
+}
+
+
 //*****************************************************************************************************************************************************************************************************
 //******
 //****** End of HTML enhancement functions.
@@ -1383,7 +1362,7 @@ def setColorTemperature(kelvin, Dimmer){
 
 //If 3 arguments are provided or only CT and duration are provided it will come here. In the latter case Dimmer will be null.
 def setColorTemperature(kelvin, Dimmer, duration){
-    log("Action - setColorTemp3", "Request CT: ${kelvin} ; Dimmer: ${Dimmer} ; Speed2: ${duration}", 0)
+    log("Action - setColorTemp3", "Request CT: ${kelvin} ; DIMMER: ${Dimmer} ; SPEED2: ${duration}", 0)
     if (duration < 0) duration = 0
     if (duration > 40) duration = 40
     if (duration > 0 ) duration = Math.round(duration * 2)    //Tasmota uses 0.5 second increments so double it for Tasmota Speed value
@@ -1414,7 +1393,7 @@ def setLevel(Dimmer, duration) {
     if (duration > 40) duration = 40
     if (duration > 0 ) duration = Math.round(duration * 2)    //Tasmota uses 0.5 second increments so double it for Tasmota Speed value
     delay = duration * 10 + 5    //Delay is in 1/10 of a second so we make it slightly longer than the actual fade delay.
-	log ("Action - setLevel2", "Request Dimmer: ${Dimmer}% ;  Speed2: ${duration}", 0)
+	log ("Action - setLevel2", "Request Dimmer: ${Dimmer}% ;  SPEED2: ${duration}", 0)
     command = "Rule3 OFF ; Dimmer ${Dimmer} ; SPEED2 ${duration} ; DELAY ${delay} ; Rule3 ON"
 	callTasmota("BACKLOG", command)
 	}
@@ -1439,7 +1418,7 @@ def setHue(float value){
     HEX = hubitat.helper.ColorUtils.rgbToHEX(RGB)
     log ("setHue", "New HEX Color is: ${HEX}", 1)
     
-    //If a dimmer level is set we will preserve it when changing the color.
+	//If a dimmer level is set we will preserve it when changing the color.
     if ( device.currentValue('level') == 100 ) callTasmota("COLOR", HEX )
     else callTasmota("COLOR2", HEX )
 }
@@ -1463,7 +1442,7 @@ def setSaturation(float value){
     HEX = hubitat.helper.ColorUtils.rgbToHEX(RGB)
     log ("setSaturation", "New HEX Color is: ${HEX}", 1)
     
-    //If a dimmer level is set we will preserve it when changing the color.
+	//If a dimmer level is set we will preserve it when changing the color.
     if ( device.currentValue('level') == 100 ) callTasmota("COLOR", HEX )
     else callTasmota("COLOR2", HEX )
 }
@@ -1529,9 +1508,11 @@ def setColor(value) {
         //This is going to appear to Tasmota as a Color change and Tasmota will respond with setting the Dimmer at 100.
         //This change will be reflected automatically in the Hubitat app but may not be picked up by other integration platforms if that was the source of the Color selection.
         }
-        //If a dimmer level is set we will preserve it when changing the color.
+																			   
+		//If a dimmer level is set we will preserve it when changing the color.
         if ( device.currentValue('level') == 100 ) callTasmota("COLOR", desiredColor )
         else callTasmota("COLOR2", desiredColor )
+												 
     }
 
 //Tests whether a given Color is RGB or W and returns true or false plus the cleaned up Color
@@ -1591,7 +1572,7 @@ void tasmotaTelePeriod(String seconds) {
 //Toggles the device state
 void toggle() {
     log("Action", "Toggle ", 0)
-    if (device.currentValue("switch") == "on" ) off()
+    if (device.currentValue("switch1") == "on" ) off()
     else on()
 }
 

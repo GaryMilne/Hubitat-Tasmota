@@ -1,10 +1,10 @@
 {
   "packageName": "Tasmota Sync Drivers",
   "author": "Gary J. Milne",
-  "version": "1.2.8",
+  "version": "1.3.4",
   "minimumHEVersion": "2.2.9",
-  "dateReleased": "2022-25-09",
-  "releaseNotes": "Bug fixes and improvements on Tasmota Sync Broadcaster",
+  "dateReleased": "2023-28-03",
+  "releaseNotes": "Adds ability for multi-relays to optionally create child devices. V1.3.4 fixes a bug in power profile switches.",
   "communityLink": "https://community.hubitat.com/t/tasmota-sync-drivers-native-and-real-time-synchronization-between-hubitat-and-tasmota-11/93651",
   "documentationLink": "https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf",
   "apps": [
@@ -65,7 +65,7 @@
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy",
       "description": "Tasmota Sync driver for Dual Relay/Switch/Plug with optional Energy Monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.2.4",
+      "version": "1.3.4",
       "categories": [
         "Integrations"
       ],
@@ -83,7 +83,7 @@
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Fan.groovy",
       "description": "Tasmota Sync driver for fan with switch. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.0.1",
+      "version": "1.0.2",
       "categories": [
         "Integrations"
       ],
@@ -100,7 +100,7 @@
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy",
       "description": "Tasmota Sync driver for Dual Relay/Switch/Plug with optional Energy Monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.2.4",
+      "version": "1.3.4",
       "categories": [
         "Integrations"
       ],
@@ -117,7 +117,7 @@
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Eight_Relay_Switch_Plug.groovy",
       "description": "Tasmota Sync driver for Eight Relay/Switch/Plug, no Energy Monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.2.4",
+      "version": "1.3.4",
       "categories": [
         "Integrations"
       ],
@@ -134,7 +134,7 @@
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Triple_Relay_Switch_Plug.groovy",
       "description": "Tasmota Sync driver for Triple Relay/Switch/Plug, no Energy Monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.2.4",
+      "version": "1.3.4",
       "categories": [
         "Integrations"
       ],
@@ -151,7 +151,7 @@
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Quad_Relay_Switch_Plug.groovy",
       "description": "Tasmota Sync driver for Quad Relay/Switch/Plug, no Energy Monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
       "required": false,
-      "version": "1.2.4",
+      "version": "1.3.4",
       "categories": [
         "Integrations"
       ],
