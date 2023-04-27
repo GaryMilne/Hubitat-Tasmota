@@ -167,7 +167,7 @@
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor.groovy",
       "required": false,
-      "version": "1.0.1",
+      "version": "1.0.2",
       "categories": [
         "Integrations"
       ],
@@ -185,7 +185,7 @@
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Single_Relay.groovy",
       "required": false,
-      "version": "1.0.1",
+      "version": "1.0.2",
       "categories": [
         "Integrations"
       ],
@@ -203,7 +203,7 @@
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Double_Relay.groovy",
       "required": false,
-      "version": "1.0.1",
+      "version": "1.0.2",
       "categories": [
         "Integrations"
       ],
