@@ -37,6 +37,7 @@
 *  Version 0.99.51 - Added support for 2 x relays\switches to the Universal Multi Sensor Code. Linked switch and switch1 attributes together.
 *  Version 1.0.0 - Initial public release.
 *  Version 1.0.1 - Incremented Core 0.98.2.
+*  Version 1.0.2 - Fixed an issue with the handling of sensor switches 3 and 4 that were reporting 1 and 0 instead of on and off.
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -45,7 +46,7 @@
 * Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 * Tasmota Sync Sensor Driver https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Sensor%20Documentation.pdf
 *
-*  Gary Milne - August 29th, 2022
+*  Gary Milne - April 27th, 2023
 *
 **/
 
@@ -132,7 +133,7 @@ sensorType = "All"
 metadata {
 	//definition (name: "Tasmota Sync - Universal Multi Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor.groovy", singleThreaded: true )  {
 	//definition (name: "Tasmota Sync - Universal Multi Sensor Single Relay", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Single_Relay.groovy", singleThreaded: true )  {
-	  definition (name: "Tasmota Sync - Universal Multi Sensor Double Relay", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Double_Relay.groovy", singleThreaded: true )  {
+	definition (name: "Tasmota Sync - Universal Multi Sensor Double Relay", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Double_Relay.groovy", singleThreaded: true )  {
         //capability "LiquidFlowRate"
         //capability "PressureMeasurement"
         
@@ -746,13 +747,9 @@ def hubitatResponse(body){
 //*****************************************************************************************************************************************************************************************************
 
 
-
-//**************************  Got to here in my review  *********************
-
-
 //*************************************************************************************************************************************************************************************************************
 //******
-//****** UNIQUE: The only things that get routed here are expected responses to commands issued through Hubitat.
+//****** UNIQUE: The only things that get routed here are expected responses to commands issued through Hubitat or Sensor Updates
 //******
 //*************************************************************************************************************************************************************************************************************
 
@@ -782,7 +779,7 @@ def syncTasmota(body){
         body = parseJson(body)
         
         //Preset the switch value for instances where the %var% is empty
-        switch1 = -1 ; switch2 = -1
+		switch1 = -1 ; switch2 = -1 ; switch3 = -1 ; switch4 = -1
         
         //A value of '' for any of these means no update or not present. Probably because the device has restarted and the %vars% have not repopulated. This is expected.
         //Only changes will get logged so we can report everything. In Tasmota, "power" is the switch state but we use "SWITCHX" in the TSYNC JSON.
@@ -798,14 +795,24 @@ def syncTasmota(body){
             if ( switch2.toInteger() == 1 ) sendEvent(name: "switch2", value: "on", descriptionText: "The switch was turned on.")
         }
         
+        //These lines process any sensor switches which must be placed at switch3 or switch4.
+        if (body?.SWITCH3 != '' && body?.SWITCH3 != null) { switch3 = body?.SWITCH3 ; log ("syncTasmota","Switch is: ${switch3}", 2) }
+        if ( switch3.toInteger() == 0 ) sendEvent(name: "switch3", value: "off", descriptionText: "The switch was turned off.")
+        if ( switch3.toInteger() == 1 ) sendEvent(name: "switch3", value: "on", descriptionText: "The switch was turned on.")
+        
+        //These lines process any sensor switches which must be placed at switch3 or switch4.
+        if (body?.SWITCH4 != '' && body?.SWITCH4 != null) { switch4 = body?.SWITCH4 ; log ("syncTasmota","Switch is: ${switch4}", 2) }
+        if ( switch4.toInteger() == 0 ) sendEvent(name: "switch4", value: "off", descriptionText: "The switch was turned off.")
+        if ( switch4.toInteger() == 1 ) sendEvent(name: "switch4", value: "on", descriptionText: "The switch was turned on.")
+        
         //Iterate through the data values received. Because the SENSOR fields are populated every time RULE3 runs they should never be empty\null.
         hubitatAttributeName = ""
 		body.each {
             try {
 				//Lookup the Hubitat attribute name used for this sensor value
                 hubitatAttributeName = sensor2AttributeMap[it.key.trim()]
-                //We ignore SWITCH 1 & 2 as these are processed seperately above.
-                if (it.key.toUpperCase() != "SWITCH1" && it.key.toUpperCase() != "SWITCH2" && it.key.toUpperCase() != "TSYNC" ) {
+                //We ignore SWITCHES 1-4 as these are processed seperately above.
+                if (it.key.toUpperCase() != "SWITCH1" && it.key.toUpperCase() != "SWITCH2" && it.key.toUpperCase() != "SWITCH3" && it.key.toUpperCase() != "SWITCH4"&& it.key.toUpperCase() != "TSYNC" ) {
                     log("syncTasmota", "${it.key} sensor data (${it.value}) mapped to Hubitat attribute: ${hubitatAttributeName}" , 1)
 				
                     //Check to see if the field is blank which would inidicate no change. This should never happen but you never know.
@@ -875,7 +882,6 @@ def adjustBody(String body){
 def statusResponse(body){
     //If we want to test some input then add a line here like the following example
     //body = '{"STATUSSNS":{"TIME":"2022-06-26T16:20:33","DS18B20-1":{"ID":"011937B1E1FD","TEMPERATURE":86.7},"DS18B20-2":{"ID":"011937D1CBA3","TEMPERATURE":-11.0},"TEMPUNIT":"F"}}'
-    
     //log ("statusResponse", "Entering, data Received.", 1)
     //log ("statusResponse", "Data is: ${body}.", 0)
     body = adjustBody(body)
@@ -924,17 +930,7 @@ def statusResponse(body){
 		itemNames.each {
 			log("statusResponse", "Item is: ${it}" , 3)
 			switch("${it}") { 
-            //These switches are not the power relays, these are used by things like PIR, proximity, water etc. Note: Switches have an extra field 
-			case "SWITCH3": 
-                sensorData.add ("${it}:SENSOR-SWITCH:${STATUSSNS?."$it".toLowerCase()}:switch3")
-				sendEvent(name: "switch3" , value: STATUSSNS?."$it".toLowerCase())
-				log("statusResponse", "STATUSSNS Switch3 is: ${STATUSSNS?."$it".toLowerCase()}" , 1)    
-				break
-             case "SWITCH4": 
-                sensorData.add ("${it}:SENSOR-SWITCH:${STATUSSNS?."$it".toLowerCase()}:switch4")
-				sendEvent(name: "switch4" , value: STATUSSNS?."$it".toLowerCase())
-				log("statusResponse", "STATUSSNS Switch4 is: ${STATUSSNS?."$it".toLowerCase()}" , 1)    
-				break
+                // Sensor Switches 3&4 are handled in syncTasmota
 			case "TEMPUNIT": 
                 sendEvent(name: "tempUnit" , value: STATUSSNS?."$it".toUpperCase())
 				log("statusResponse", "STATUSSNS TempUnit is: ${STATUSSNS?.TEMPUNIT}" , 1) 
