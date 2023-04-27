@@ -32,6 +32,8 @@
 			"description": "Create dashboard tiles that are highly customizable and can contain data from multiple devices.",
 			"tags": [
 				"Dashboard",
+				"Monitoring",
+				"Temperature & Humidity",
 				"Utilities"
 			]
 		}
