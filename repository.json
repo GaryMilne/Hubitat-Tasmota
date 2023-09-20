@@ -17,7 +17,7 @@
 			"name": "Precipitation and Weather Monitor for NWS Data",
 			"category": "Integrations",
 			"location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Apps/main/packageManifestApps.json",
-			"description": "Gathers hourly precipitation and other weather data from your nearest airport and makes it available to you via a device driver for access via rules. No codes or API keys needed. Provides rolling 1,3,6,12,24 hr totals and up to 7 days of precipitation history. Also provides temperature, humidity, dewpoint, pressure, wind, weather, sky conditions and visibility data.",
+			"description": "<p style='color:blue'>This is another paragraph.</p>Gathers hourly precipitation and other weather data from your nearest airport and makes it available to you via a device driver for access via rules. No codes or API keys needed. Provides rolling 1,3,6,12,24 hr totals and up to 7 days of precipitation history. Also provides temperature, humidity, dewpoint, pressure, wind, weather, sky conditions and visibility data.",
 			"tags": [
 				"Irrigation",
 				"Weather",
