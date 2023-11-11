@@ -29,12 +29,24 @@
 			"name": "Tile Builder for Hubitat",
 			"category": "Dashboards",
 			"location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-TileBuilder/main/packageManifestTileBuilder.json",
-			"description": "Create highly customizable data tables and room layouts that can be published to a dashboard and refreshed each time the underlying data changes. Combine multiple rooms to create a whole house floor plan with effects and automations.",
+			"description": "Create dashboard tiles that are highly customizable and can contain data from multiple devices.",
 			"tags": [
 				"Dashboard",
 				"Monitoring",
 				"Temperature & Humidity",
 				"Utilities"
+			]
+		},
+		{
+			"name": "Zigbee Monitor Driver",
+			"category": "Zigbee",
+			"location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Zigbee/main/packageManifestZigbee.json",
+			"description": "Driver for dedicated Zigbee Repeaters and simple Switches that allows the gathering and display of a range of Zigbee information including Children, Neighbors, LQI and Route information.",
+			"tags": [
+				"Zigbee",
+				"Repeaters & Extenders",
+				"Monitoring",
+				"Integrations"
 			]
 		}
 	]
