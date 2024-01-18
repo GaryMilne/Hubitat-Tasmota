@@ -1,7 +1,7 @@
 {
   "packageName": "Tasmota Sync Drivers",
   "author": "Gary J. Milne",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "minimumHEVersion": "2.2.9",
   "dateReleased": "2023-28-03",
   "releaseNotes": "Adds ability for multi-relays to optionally create child devices. V1.3.4 fixes a bug in power profile switches.",
@@ -167,7 +167,7 @@
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor.groovy",
       "required": false,
-      "version": "1.0.2",
+      "version": "1.0.4",
       "categories": [
         "Integrations"
       ],
@@ -185,7 +185,7 @@
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Single_Relay.groovy",
       "required": false,
-      "version": "1.0.2",
+      "version": "1.0.4",
       "categories": [
         "Integrations"
       ],
@@ -203,7 +203,7 @@
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Double_Relay.groovy",
       "required": false,
-      "version": "1.0.2",
+      "version": "1.0.4",
       "categories": [
         "Integrations"
       ],
