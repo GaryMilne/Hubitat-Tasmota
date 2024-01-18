@@ -57,7 +57,7 @@ import groovy.transform.Field
 
 //This determines the number of power relays that will appear within the device. These will always be switch1 and switch2 and should be configured as such in Tasmota.
 //The device may also have additional sensors that act like switches. These should be configured as switch3 and switch4 in Tasmota if present. 
-@Field static final Integer switchCount = 2
+@Field static final Integer switchCount = 0
 
 sensorType = "All"
 //sensorType = "Common"        //Includes AirQuality, Energy and Environmental.
@@ -136,14 +136,16 @@ sensorType = "All"
 @Field static final mirroredAttributes = ['POWER' : 'energy', 'CURRENT' : 'amperage', 'ECO' : 'carbonMonoxide' , 'ECO2' : 'carbonDioxide' , 'FLOW' : 'rate']
 
 metadata {
-	//definition (name: "Tasmota Sync - Universal Multi Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor.groovy", singleThreaded: true )  {
+	definition (name: "Tasmota Sync - Universal Multi Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor.groovy", singleThreaded: true )  {
 	//definition (name: "Tasmota Sync - Universal Multi Sensor Single Relay", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Single_Relay.groovy", singleThreaded: true )  {
-	definition (name: "Tasmota Sync - Universal Multi Sensor Double Relay", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Double_Relay.groovy", singleThreaded: true )  {
+	//definition (name: "Tasmota Sync - Universal Multi Sensor Double Relay", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Double_Relay.groovy", singleThreaded: true )  {
         //capability "LiquidFlowRate"
         //capability "PressureMeasurement"
         
         capability "Refresh"
         capability "Sensor"
+        capability "ContactSensor"
+        
         command "initialize"
         command "tasmotaInjectRule", [[name:"Creates and inserts Rule3 to the Tasmota device. Required for updates to be sent from Tasmota to Hubitat."]]
         command "tasmotaCustomCommand", [ [name:"Enter valid Tasmota command and optional parameter.*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "A single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
@@ -164,9 +166,9 @@ metadata {
         log.info ("SwitchCount is: ${switchCount}")
         //switch1 and switch2 Reserved for power relays
         if (switchCount >= 1) { 
+            capability "Switch"
             attribute "switch", "string"
             attribute "switch1",  "string" 
-            capability "Switch"
             command "on", [[name:"'On' and 'Switch1 On' are the same. Attr switch & switch1 synchronized."]]
             command "off", [[name:"'Off' and 'Switch1 Off' are the same. Attr switch & switch1 synchronized."]]
             command "toggle", [[name:"Note: Reverses the state of switch\\switch1."]]
@@ -182,9 +184,11 @@ metadata {
         //Descriptors. These are at the top level of the STATUSSNS message.
         attribute "switch3", "string"           //Reserved for Tasmota sensors.  example: Some "SENSOR" devices act like a switch such as a motion detector. '{"STATUSSNS":{"Time":"2022-01-07T19:43:24","Switch3":"ON","Switch4":"ON","TempUnit":"C"}}'
         attribute "switch4", "string"           //Reserved for Tasmota sensors.  example: Some "SENSOR" devices act like a switch such as a motion detector. '{"STATUSSNS":{"Time":"2022-01-07T19:43:24","Switch3":"ON","Switch4":"ON","TempUnit":"C"}}'
+        attribute "contact3", "string"
+        attribute "contact4", "string"
         attribute "pressureUnit", "string"      //Tasmota example: {"Time": "2019-11-03T19:34:28","BME280": {"Temperature": 21.7,"Humidity": 66.6,"Pressure": 988.6},"PressureUnit": "hPa","TempUnit": "C"}  -  Change with SetOption24 
         attribute "tempUnit", "string"          //Tasmota example: {"Time":"2022-05-17T03:33:05","SI7021":{"Temperature":69,"Humidity":28,"DewPoint":34},"TempUnit":"F"}  - Change with SetOption8. off is celsius and on is fahrenheit. Must do a refresh to update Hubitat.
-        attribute "speedUnit", "string"        //Tasmota example: '{"Time": "2020-03-03T00:00:00+00:00","TX23": {"Speed": {"Act": 14.8,"Avg": 8.5,"Min": 12.2,"Max": 14.8},"Dir": {"Card": "WSW","Deg": 247.5,"Avg": 266.1,"AvgCard": "W","Min": 247.5,"Max": 247.5,"Range": 0}},"SpeedUnit": "km/h"}}}'
+        attribute "speedUnit", "string"         //Tasmota example: '{"Time": "2020-03-03T00:00:00+00:00","TX23": {"Speed": {"Act": 14.8,"Avg": 8.5,"Min": 12.2,"Max": 14.8},"Dir": {"Card": "WSW","Deg": 247.5,"Avg": 266.1,"AvgCard": "W","Min": 247.5,"Max": 247.5,"Range": 0}},"SpeedUnit": "km/h"}}}'
         
         log.info ("Tasmota Sync - Universal Multi Sensor Driver reloaded with sensor type ${sensorType}")
         //Accelerometer - '{"STATUSSNS":{"Time":"2019-12-10T19:37:50","MPU6050":{"Temperature":27.7,"AccelXAxis":-7568.00,"AccelYAxis":-776.00,"AccelZAxis":12812.00,"GyroXAxis":270.00,"GyroYAxis":-741.00,"GyroZAxis":700.00},"TempUnit":"C"}}'
@@ -811,13 +815,26 @@ def syncTasmota(body){
         
         //These lines process any sensor switches which must be placed at switch3 or switch4.
         if (body?.SWITCH3 != '' && body?.SWITCH3 != null) { switch3 = body?.SWITCH3 ; log ("syncTasmota","Switch is: ${switch3}", 2) }
-        if ( switch3.toInteger() == 0 ) sendEvent(name: "switch3", value: "off", descriptionText: "The switch was turned off.")
-        if ( switch3.toInteger() == 1 ) sendEvent(name: "switch3", value: "on", descriptionText: "The switch was turned on.")
+        if ( switch3.toInteger() == 0 ) {
+            sendEvent(name: "switch3", value: "off", descriptionText: "The switch was turned off.")
+            sendEvent(name: "contact3", value: "open", descriptionText: "The contact was opened.")
+        
+        }
+        if ( switch3.toInteger() == 1 ) {
+            sendEvent(name: "switch3", value: "on", descriptionText: "The switch was turned on.")
+            sendEvent(name: "contact3", value: "closed", descriptionText: "The contact was closed.")
+        }
         
         //These lines process any sensor switches which must be placed at switch3 or switch4.
         if (body?.SWITCH4 != '' && body?.SWITCH4 != null) { switch4 = body?.SWITCH4 ; log ("syncTasmota","Switch is: ${switch4}", 2) }
-        if ( switch4.toInteger() == 0 ) sendEvent(name: "switch4", value: "off", descriptionText: "The switch was turned off.")
-        if ( switch4.toInteger() == 1 ) sendEvent(name: "switch4", value: "on", descriptionText: "The switch was turned on.")
+        if ( switch4.toInteger() == 0 ) {
+            sendEvent(name: "switch4", value: "off", descriptionText: "The switch was turned off.")
+            sendEvent(name: "contact4", value: "open", descriptionText: "The contact was opened.")
+        }
+        if ( switch4.toInteger() == 1 ) {
+            sendEvent(name: "switch4", value: "on", descriptionText: "The switch was turned on.")
+            sendEvent(name: "contact4", value: "closed", descriptionText: "The contact was closed.")
+        }
         
         //Iterate through the data values received. Because the SENSOR fields are populated every time RULE3 runs they should never be empty\null.
         hubitatAttributeName = ""

@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Universal Multi Sensor with configurable relays
-*  Version: v1.0.1
+*  Version: v1.0.4
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Sensors. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -38,6 +38,8 @@
 *  Version 1.0.0 - Initial public release.
 *  Version 1.0.1 - Incremented Core 0.98.2.
 *  Version 1.0.2 - Fixed an issue with the handling of sensor switches 3 and 4 that were reporting 1 and 0 instead of on and off.
+*  Version 1.0.3 - Added definitions for Tasmota Counters C1, C2, C3 and C4.
+*  Version 1.0.4 - Corrects error when doing TasmotaInjectRule caused by lack of "SWITCH" handling in statusResponse().
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -46,7 +48,7 @@
 * Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 * Tasmota Sync Sensor Driver https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Sensor%20Documentation.pdf
 *
-*  Gary Milne - April 27th, 2023
+*  Gary Milne - January 18th, 2024
 *
 **/
 
@@ -63,6 +65,7 @@ sensorType = "All"
 //sensorType = "AirQuality"
 //sensorType = "Analog"
 //sensorType = "Chemical"
+//sensorType = "Counters"
 //sensorType = "Energy"
 //sensorType = "Environmental"
 //sensorType = "Flow"
@@ -94,7 +97,8 @@ sensorType = "All"
                                            'ACTIVE' : 'active', 'FLOWRATE' : 'flowRate',  //Rain. Note that event and total are also part of RAIN but are defined elsewhere.
                                            'PULSE' : 'pulse',  //RF sensor. Note that data, bits and protocol are all defined elsewhere. 
                                            'TYPE' : 'type',     //RFID. Note that uid and data are defined elsewhere.
-                                           'SWITCH' : 'switch', 'SWITCH1' : 'switch1', 'SWITCH2' : 'switch2', 'SWITCH3' : 'switch3', 'SWITCH4' : 'switch4'
+                                           'SWITCH' : 'switch', 'SWITCH1' : 'switch1', 'SWITCH2' : 'switch2', 'SWITCH3' : 'switch3', 'SWITCH4' : 'switch4', //Switches
+                                           'C1':'C1', 'C2':'C2', 'C3':'C3', 'C4':'C4'
                                           ]
 
 //These are the types of fields that the driver will attempt to de-dupe. For example 3 temperature sensors would end up as temperature, temperature1, temperature2.
@@ -118,7 +122,8 @@ sensorType = "All"
                                            'WEIGHT', 'WEIGHTRAW', 'ABSRAW', //Load Sensor
                                            //NFC. Note that data is also a part of NFC but has already been defined elsewhere.
                                            'ACTIVE', 'FLOWRATE',  //Rain. Note that event and total are also part of RAIN but are defined elsewhere.
-                                           'PULSE'  //RF sensor. Note that data, bits and protocol are all defined elsewhere. 
+                                           'PULSE', //RF sensor. Note that data, bits and protocol are all defined elsewhere. 
+                                            'C1', 'C2','C3','C4'  //These are the variables used for Tasmota counters.
                                            ]
 
 //First item in the pair is the name of the Tasmota sensor data type in uppercase form. The second name is the name of the driver unit attribute for that type of data.  For example 'tempUnit' will contain either a 'C' or 'F' if temperature is a valid data field.
@@ -132,7 +137,7 @@ sensorType = "All"
 
 metadata {
 	//definition (name: "Tasmota Sync - Universal Multi Sensor", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor.groovy", singleThreaded: true )  {
-	  definition (name: "Tasmota Sync - Universal Multi Sensor Single Relay", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Single_Relay.groovy", singleThreaded: true )  {
+	definition (name: "Tasmota Sync - Universal Multi Sensor Single Relay", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Single_Relay.groovy", singleThreaded: true )  {
 	//definition (name: "Tasmota Sync - Universal Multi Sensor Double Relay", namespace: "garyjmilne", author: "Gary J. Milne", importUrl: "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Double_Relay.groovy", singleThreaded: true )  {
         //capability "LiquidFlowRate"
         //capability "PressureMeasurement"
@@ -217,6 +222,14 @@ metadata {
         //Chemical
         if ( sensorType == "All" || sensorType == "Chemical") {
             capability "pHMeasurement" ; attribute "pH", "number"
+        }
+        
+        //Tasmota Counters
+        if ( sensorType == "All" || sensorType == "Counters") {
+            attribute "C1", "number"
+            attribute "C2", "number"
+            attribute "C3", "number"
+            attribute "C4", "number"
         }
             
         //Distance
@@ -388,6 +401,7 @@ void evaluateSensorData(String status8){
     state.Action = "STATUS"
     state.ActionValue = "8"
     body = status8.toUpperCase()
+    log.info("Calling statusResponse with $body")
     statusResponse(body)  
 }
 
@@ -882,8 +896,8 @@ def adjustBody(String body){
 def statusResponse(body){
     //If we want to test some input then add a line here like the following example
     //body = '{"STATUSSNS":{"TIME":"2022-06-26T16:20:33","DS18B20-1":{"ID":"011937B1E1FD","TEMPERATURE":86.7},"DS18B20-2":{"ID":"011937D1CBA3","TEMPERATURE":-11.0},"TEMPUNIT":"F"}}'
-    //log ("statusResponse", "Entering, data Received.", 1)
-    //log ("statusResponse", "Data is: ${body}.", 0)
+    log ("statusResponse", "Entering, data Received.", 1)
+    log ("statusResponse", "Data is: ${body}.", 0)
     body = adjustBody(body)
     
     //Now parse into JSON to extract data.
@@ -907,11 +921,11 @@ def statusResponse(body){
         
 		//Go through each of the top level fields
 		STATUSSNS.each{
-			 //log("statusResponse", "Name: ${it.key}" , 3)
+			 log("statusResponse", "Name: ${it.key}" , 3)
 			 DATA = STATUSSNS?."$it.key"
 			 String mystring = "${DATA}"
 			
-			 //If it is JSON format we need to iterate it for the pair data. If not in JSON we just grab the data later.
+			//If it is JSON format we need to iterate it for the pair data. If not in JSON we just grab the data later.
 			if (mystring.contains("[") == true ) {
 				sensorNames.add(it.key) 
 				log("statusResponse", "Add sensor: ${it.key}" , 3)
@@ -930,22 +944,33 @@ def statusResponse(body){
 		itemNames.each {
 			log("statusResponse", "Item is: ${it}" , 3)
 			switch("${it}") { 
-                // Sensor Switches 3&4 are handled in syncTasmota
-			case "TEMPUNIT": 
-                sendEvent(name: "tempUnit" , value: STATUSSNS?."$it".toUpperCase())
-				log("statusResponse", "STATUSSNS TempUnit is: ${STATUSSNS?.TEMPUNIT}" , 1) 
-				break
-			case "PRESSUREUNIT": 
-				sendEvent(name: "pressureUnit" , value: STATUSSNS?."$it".toUpperCase())
-				log("statusResponse", "STATUSSNS PressureUnit is: ${STATUSSNS?.PRESSUREUNIT}" , 1) 
-				break
-            case "SPEEDUNIT": 
-				sendEvent(name: "speedUnit" , value: STATUSSNS?."$it".toUpperCase())
-				log("statusResponse", "STATUSSNS SpeedUnit is: ${STATUSSNS?.SPEEDUNIT}" , 1) 
-				break
-			case "TIME": 
-                log("statusResponse", "STATUSSNS Time is: ${STATUSSNS?.TIME}" , 1) 
-				break
+			//These switches are not the power relays, these are used by things like PIR, proximity, water etc. Note: Switches have an extra field 
+				case "SWITCH3": 
+					sensorData.add ("${it}:SENSOR-SWITCH:${STATUSSNS?."$it".toLowerCase()}:switch3")
+					sendEvent(name: "switch3" , value: STATUSSNS?."$it".toLowerCase())
+					log("statusResponse", "STATUSSNS Switch3 is: ${STATUSSNS?."$it".toLowerCase()}" , 1)    
+					break
+				case "SWITCH4": 
+					sensorData.add ("${it}:SENSOR-SWITCH:${STATUSSNS?."$it".toLowerCase()}:switch4")
+					sendEvent(name: "switch4" , value: STATUSSNS?."$it".toLowerCase())
+					log("statusResponse", "STATUSSNS Switch4 is: ${STATUSSNS?."$it".toLowerCase()}" , 1)    
+					break
+					// Sensor Switches 3&4 are handled in syncTasmota
+				case "TEMPUNIT": 
+					sendEvent(name: "tempUnit" , value: STATUSSNS?."$it".toUpperCase())
+					log("statusResponse", "STATUSSNS TempUnit is: ${STATUSSNS?.TEMPUNIT}" , 1) 
+					break
+				case "PRESSUREUNIT": 
+					sendEvent(name: "pressureUnit" , value: STATUSSNS?."$it".toUpperCase())
+					log("statusResponse", "STATUSSNS PressureUnit is: ${STATUSSNS?.PRESSUREUNIT}" , 1) 
+					break
+				case "SPEEDUNIT": 
+					sendEvent(name: "speedUnit" , value: STATUSSNS?."$it".toUpperCase())
+					log("statusResponse", "STATUSSNS SpeedUnit is: ${STATUSSNS?.SPEEDUNIT}" , 1) 
+					break
+				case "TIME": 
+					log("statusResponse", "STATUSSNS Time is: ${STATUSSNS?.TIME}" , 1) 
+					break
 			}
 		}
                 
