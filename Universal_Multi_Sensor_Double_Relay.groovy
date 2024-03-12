@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Universal Multi Sensor with configurable relays
-*  Version: v1.0.4
+*  Version: v1.0.5
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Sensors. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -40,6 +40,7 @@
 *  Version 1.0.2 - Fixed an issue with the handling of sensor switches 3 and 4 that were reporting 1 and 0 instead of on and off.
 *  Version 1.0.3 - Added definitions for Tasmota Counters C1, C2, C3 and C4.
 *  Version 1.0.4 - Corrects error when doing TasmotaInjectRule caused by lack of "SWITCH" handling in statusResponse().
+*  Version 1.0.5 - Adds support for OBIS power monitoring sensor.
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -48,7 +49,7 @@
 * Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 * Tasmota Sync Sensor Driver https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Sensor%20Documentation.pdf
 *
-*  Gary Milne - January 18th, 2024
+*  Gary Milne - March 11th, 2024
 *
 **/
 
@@ -84,7 +85,7 @@ sensorType = "All"
                                            'RANGE' : 'range', //Analog input
                                            'PH' : 'pH',         //Chemical
                                            'DISTANCE' : 'distance', //Physical
-                                           'CURRENT' : 'current', 'POWER' : 'power' , 'VOLTAGE' : 'voltage', 'TOTAL' : 'total', 'YESTERDAY' : 'yesterday', 'TODAY' : 'today', 'APPARENTPOWER' : 'apparentPower', 'REACTIVEPOWER' : 'reactivePower' , 'FACTOR' : 'factor',  'FREQUENCY' : 'frequency', 'PERIOD' : 'period', 'TOTALSTARTTIME' : 'totalStartTime', //Electrical Energy
+                                           'CURRENT' : 'current', 'POWER' : 'power' , 'VOLTAGE' : 'voltage', 'TOTAL' : 'total', 'YESTERDAY' : 'yesterday', 'TODAY' : 'today', 'APPARENTPOWER' : 'apparentPower', 'REACTIVEPOWER' : 'reactivePower' , 'FACTOR' : 'factor',  'FREQUENCY' : 'frequency', 'PERIOD' : 'period', 'TOTALSTARTTIME' : 'totalStartTime',
                                            'DEWPOINT' : 'dewPoint', 'ILLUMINANCE' : 'illuminance' , 'PRESSURE' : 'pressure', 'GAS' : 'gas', 'ULTRAVIOLET' : 'ultraViolet', 'SOUNDPRESSURELEVEL' : 'soundPressureLevel',    //Environmental
                                            'FLOW' : 'rate',    //Flow
                                            'D0' : 'd0', 'D1' : 'd1', 'D2' : 'd2', 'D3' : 'd3', 'D4' : 'd4', 'D5' : 'd5', 'D6' : 'd6', 'D7' : 'd7', 'MS' : 'ms',     //  I/O Expansion
@@ -98,7 +99,8 @@ sensorType = "All"
                                            'PULSE' : 'pulse',  //RF sensor. Note that data, bits and protocol are all defined elsewhere. 
                                            'TYPE' : 'type',     //RFID. Note that uid and data are defined elsewhere.
                                            'SWITCH' : 'switch', 'SWITCH1' : 'switch1', 'SWITCH2' : 'switch2', 'SWITCH3' : 'switch3', 'SWITCH4' : 'switch4', //Switches
-                                           'C1':'C1', 'C2':'C2', 'C3':'C3', 'C4':'C4'
+                                           'C1':'C1', 'C2':'C2', 'C3':'C3', 'C4':'C4',
+                                           'TOTAL_OUT' : 'totalPowerOut', 'TOTAL_IN' : 'totalPowerIn', 'POWER_CURR' : 'power' //Added as support for OBIS sensor - Electrical Energy
                                           ]
 
 //These are the types of fields that the driver will attempt to de-dupe. For example 3 temperature sensors would end up as temperature, temperature1, temperature2.
@@ -144,6 +146,8 @@ metadata {
         
         capability "Refresh"
         capability "Sensor"
+        capability "ContactSensor"
+        
         command "initialize"
         command "tasmotaInjectRule", [[name:"Creates and inserts Rule3 to the Tasmota device. Required for updates to be sent from Tasmota to Hubitat."]]
         command "tasmotaCustomCommand", [ [name:"Enter valid Tasmota command and optional parameter.*", type: "STRING", description: "A single word command to be issued such as COLOR, CT, DIMMER etc."], [name:"Parameter", type: "STRING", description: "A single parameter that accompanies the command such as FFFFFFFF, 350, 75 etc."] ]
@@ -164,9 +168,9 @@ metadata {
         log.info ("SwitchCount is: ${switchCount}")
         //switch1 and switch2 Reserved for power relays
         if (switchCount >= 1) { 
+            capability "Switch"
             attribute "switch", "string"
             attribute "switch1",  "string" 
-            capability "Switch"
             command "on", [[name:"'On' and 'Switch1 On' are the same. Attr switch & switch1 synchronized."]]
             command "off", [[name:"'Off' and 'Switch1 Off' are the same. Attr switch & switch1 synchronized."]]
             command "toggle", [[name:"Note: Reverses the state of switch\\switch1."]]
@@ -182,9 +186,11 @@ metadata {
         //Descriptors. These are at the top level of the STATUSSNS message.
         attribute "switch3", "string"           //Reserved for Tasmota sensors.  example: Some "SENSOR" devices act like a switch such as a motion detector. '{"STATUSSNS":{"Time":"2022-01-07T19:43:24","Switch3":"ON","Switch4":"ON","TempUnit":"C"}}'
         attribute "switch4", "string"           //Reserved for Tasmota sensors.  example: Some "SENSOR" devices act like a switch such as a motion detector. '{"STATUSSNS":{"Time":"2022-01-07T19:43:24","Switch3":"ON","Switch4":"ON","TempUnit":"C"}}'
+        attribute "contact3", "string"
+        attribute "contact4", "string"
         attribute "pressureUnit", "string"      //Tasmota example: {"Time": "2019-11-03T19:34:28","BME280": {"Temperature": 21.7,"Humidity": 66.6,"Pressure": 988.6},"PressureUnit": "hPa","TempUnit": "C"}  -  Change with SetOption24 
         attribute "tempUnit", "string"          //Tasmota example: {"Time":"2022-05-17T03:33:05","SI7021":{"Temperature":69,"Humidity":28,"DewPoint":34},"TempUnit":"F"}  - Change with SetOption8. off is celsius and on is fahrenheit. Must do a refresh to update Hubitat.
-        attribute "speedUnit", "string"        //Tasmota example: '{"Time": "2020-03-03T00:00:00+00:00","TX23": {"Speed": {"Act": 14.8,"Avg": 8.5,"Min": 12.2,"Max": 14.8},"Dir": {"Card": "WSW","Deg": 247.5,"Avg": 266.1,"AvgCard": "W","Min": 247.5,"Max": 247.5,"Range": 0}},"SpeedUnit": "km/h"}}}'
+        attribute "speedUnit", "string"         //Tasmota example: '{"Time": "2020-03-03T00:00:00+00:00","TX23": {"Speed": {"Act": 14.8,"Avg": 8.5,"Min": 12.2,"Max": 14.8},"Dir": {"Card": "WSW","Deg": 247.5,"Avg": 266.1,"AvgCard": "W","Min": 247.5,"Max": 247.5,"Range": 0}},"SpeedUnit": "km/h"}}}'
         
         log.info ("Tasmota Sync - Universal Multi Sensor Driver reloaded with sensor type ${sensorType}")
         //Accelerometer - '{"STATUSSNS":{"Time":"2019-12-10T19:37:50","MPU6050":{"Temperature":27.7,"AccelXAxis":-7568.00,"AccelYAxis":-776.00,"AccelZAxis":12812.00,"GyroXAxis":270.00,"GyroYAxis":-741.00,"GyroZAxis":700.00},"TempUnit":"C"}}'
@@ -245,6 +251,7 @@ metadata {
             attribute "current", "number" ; attribute "power", "number" ; attribute "voltage", "number" ; attribute "total", "number" ;  attribute "yesterday", "number" 
             attribute "today", "number" ; attribute "apparentPower", "number" ; attribute "reactivePower", "number" ; attribute "factor", "number" ; attribute "frequency", "number"
             attribute "period", "number" ; attribute "totalStartTimePeriod", "string"
+            attribute "totalPowerIn", "number" ; attribute "totalPowerOut", "number" ; attribute "power", "number"   //Tasmota example: {"StatusSNS":{"Time":"1970-04-12T11:22:48","OBIS":{"Total_in":62204.1100,"Total_out":57914.9103,"Power_curr":0}}}
             
             //Extra attributes for compatibility with Hubitat capabilities
             attribute "amperage", "number"          //Unit A
@@ -390,6 +397,8 @@ def test(){
     //Known non-working examples
     //body = '{"STATUSSNS":{"Time": "2020-03-03T00:00:00+00:00","TX23": {"Speed": {"Act": 14.8,"Avg": 8.5,"Min": 12.2,"Max": 14.8},"Dir": {"Card": "WSW","Deg": 247.5,"Avg": 266.1,"AvgCard": "W","Min": 247.5,"Max": 247.5,"Range": 0}},"SpeedUnit": "km/h"}}}'
     //body = '{"StatusSNS":{"Time":"2022-08-15T22:00:44","DS18B20-1":{"Id":"3C01F0965038","Temperature":25.0},"DS18B20-2":{"Id":"3C01F0967907","Temperature":25.1},"DS18B20-3":{"Id":"3C01F0969327","Temperature":24.8,"Humidity":59},"BME280":{"Temperature":23.8,"Humidity":57.9,"DewPoint":15.0,"Pressure":985.8},"PressureUnit":"hPa","TempUnit":"C"}}'
+    
+    body = '{"StatusSNS":{"Time":"1970-04-12T11:22:48","OBIS":{"Total_in":62204.1100,"Total_out":57914.9103,"Power_curr":0}}}'
     state.Action = "STATUS"
     state.ActionValue = "8"
     body = body.toUpperCase()
@@ -811,13 +820,26 @@ def syncTasmota(body){
         
         //These lines process any sensor switches which must be placed at switch3 or switch4.
         if (body?.SWITCH3 != '' && body?.SWITCH3 != null) { switch3 = body?.SWITCH3 ; log ("syncTasmota","Switch is: ${switch3}", 2) }
-        if ( switch3.toInteger() == 0 ) sendEvent(name: "switch3", value: "off", descriptionText: "The switch was turned off.")
-        if ( switch3.toInteger() == 1 ) sendEvent(name: "switch3", value: "on", descriptionText: "The switch was turned on.")
+        if ( switch3.toInteger() == 0 ) {
+            sendEvent(name: "switch3", value: "off", descriptionText: "The switch was turned off.")
+            sendEvent(name: "contact3", value: "open", descriptionText: "The contact was opened.")
+        
+        }
+        if ( switch3.toInteger() == 1 ) {
+            sendEvent(name: "switch3", value: "on", descriptionText: "The switch was turned on.")
+            sendEvent(name: "contact3", value: "closed", descriptionText: "The contact was closed.")
+        }
         
         //These lines process any sensor switches which must be placed at switch3 or switch4.
         if (body?.SWITCH4 != '' && body?.SWITCH4 != null) { switch4 = body?.SWITCH4 ; log ("syncTasmota","Switch is: ${switch4}", 2) }
-        if ( switch4.toInteger() == 0 ) sendEvent(name: "switch4", value: "off", descriptionText: "The switch was turned off.")
-        if ( switch4.toInteger() == 1 ) sendEvent(name: "switch4", value: "on", descriptionText: "The switch was turned on.")
+        if ( switch4.toInteger() == 0 ) {
+            sendEvent(name: "switch4", value: "off", descriptionText: "The switch was turned off.")
+            sendEvent(name: "contact4", value: "open", descriptionText: "The contact was opened.")
+        }
+        if ( switch4.toInteger() == 1 ) {
+            sendEvent(name: "switch4", value: "on", descriptionText: "The switch was turned on.")
+            sendEvent(name: "contact4", value: "closed", descriptionText: "The contact was closed.")
+        }
         
         //Iterate through the data values received. Because the SENSOR fields are populated every time RULE3 runs they should never be empty\null.
         hubitatAttributeName = ""
@@ -825,6 +847,7 @@ def syncTasmota(body){
             try {
 				//Lookup the Hubitat attribute name used for this sensor value
                 hubitatAttributeName = sensor2AttributeMap[it.key.trim()]
+                log.info ("test: $hubitatAttributeName")
                 //We ignore SWITCHES 1-4 as these are processed seperately above.
                 if (it.key.toUpperCase() != "SWITCH1" && it.key.toUpperCase() != "SWITCH2" && it.key.toUpperCase() != "SWITCH3" && it.key.toUpperCase() != "SWITCH4"&& it.key.toUpperCase() != "TSYNC" ) {
                     log("syncTasmota", "${it.key} sensor data (${it.value}) mapped to Hubitat attribute: ${hubitatAttributeName}" , 1)
@@ -984,10 +1007,9 @@ def statusResponse(body){
 			//Iterate through the list of data items.
 			sensorFields.any { data ->
 				try {   
-				log("statusResponse", "Data is: ${data.key}  Value: ${data.value}" , 2)
+				log("statusResponse", "Data.Key is: ${data.key}  Data.Value: ${data.value}" , 2)
 				//Lookup the Hubitat attribute name used for this sensor value
 				attribute = sensor2AttributeMap[data.key]
-                    
                 //If a match is found the attribute will be processed. Otherwise it will be ignored
                 if ( attribute != null ){
                     sendEvent( name: attribute, value: data.value )
