@@ -1,10 +1,10 @@
 {
   "packageName": "Tasmota Sync Drivers",
   "author": "Gary J. Milne",
-  "version": "1.3.5",
+  "version": "136",
   "minimumHEVersion": "2.2.9",
-  "dateReleased": "2023-28-03",
-  "releaseNotes": "Adds ability for multi-relays to optionally create child devices. V1.3.4 fixes a bug in power profile switches.",
+  "dateReleased": "2024-12-03",
+  "releaseNotes": "Package-136: Adds support for OBIS energy monitoring driver to Universal_Multi_Sensor.\n Adds ability for multi-relays to optionally create child devices. V1.3.4 fixes a bug in power profile switches.",
   "communityLink": "https://community.hubitat.com/t/tasmota-sync-drivers-native-and-real-time-synchronization-between-hubitat-and-tasmota-11/93651",
   "documentationLink": "https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf",
   "apps": [
@@ -167,7 +167,7 @@
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor.groovy",
       "required": false,
-      "version": "1.0.4",
+      "version": "1.0.5",
       "categories": [
         "Integrations"
       ],
@@ -185,7 +185,7 @@
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Single_Relay.groovy",
       "required": false,
-      "version": "1.0.4",
+      "version": "1.0.5",
       "categories": [
         "Integrations"
       ],
@@ -203,7 +203,7 @@
       "namespace": "garyjmilne",
       "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Double_Relay.groovy",
       "required": false,
-      "version": "1.0.4",
+      "version": "1.0.5",
       "categories": [
         "Integrations"
       ],
