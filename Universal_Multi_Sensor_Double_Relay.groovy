@@ -41,6 +41,7 @@
 *  Version 1.0.3 - Added definitions for Tasmota Counters C1, C2, C3 and C4.
 *  Version 1.0.4 - Corrects error when doing TasmotaInjectRule caused by lack of "SWITCH" handling in statusResponse().
 *  Version 1.0.5 - Adds support for OBIS power monitoring sensor.
+*  Version 1.0.6 - Adds trigger support for OBIS power monitoring sensor.
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -49,7 +50,7 @@
 * Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 * Tasmota Sync Sensor Driver https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Sensor%20Documentation.pdf
 *
-*  Gary Milne - March 11th, 2024
+*  Gary Milne - March 14th, 2024
 *
 **/
 
@@ -100,7 +101,6 @@ sensorType = "All"
                                            'TYPE' : 'type',     //RFID. Note that uid and data are defined elsewhere.
                                            'SWITCH' : 'switch', 'SWITCH1' : 'switch1', 'SWITCH2' : 'switch2', 'SWITCH3' : 'switch3', 'SWITCH4' : 'switch4', //Switches
                                            'C1':'C1', 'C2':'C2', 'C3':'C3', 'C4':'C4',
-                                           'TOTAL_OUT' : 'totalPowerOut', 'TOTAL_IN' : 'totalPowerIn', 'POWER_CURR' : 'power' //Added as support for OBIS sensor - Electrical Energy
                                           ]
 
 //These are the types of fields that the driver will attempt to de-dupe. For example 3 temperature sensors would end up as temperature, temperature1, temperature2.
@@ -125,7 +125,8 @@ sensorType = "All"
                                            //NFC. Note that data is also a part of NFC but has already been defined elsewhere.
                                            'ACTIVE', 'FLOWRATE',  //Rain. Note that event and total are also part of RAIN but are defined elsewhere.
                                            'PULSE', //RF sensor. Note that data, bits and protocol are all defined elsewhere. 
-                                            'C1', 'C2','C3','C4'  //These are the variables used for Tasmota counters.
+                                           'C1', 'C2','C3','C4',  //These are the variables used for Tasmota counters.
+                                           'TOTAL_OUT', 'TOTAL_IN', 'POWER_CURR'  //Trigger support for OBIS power monitoring
                                            ]
 
 //First item in the pair is the name of the Tasmota sensor data type in uppercase form. The second name is the name of the driver unit attribute for that type of data.  For example 'tempUnit' will contain either a 'C' or 'F' if temperature is a valid data field.

@@ -1,6 +1,6 @@
 /**
 *  Tasmota Sync Universal Multi Sensor with configurable relays
-*  Version: v1.0.5
+*  Version: v1.0.6
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota Sensors. Provides Realtime and native synchronization between Hubitat and Tasmota
 *
@@ -41,6 +41,7 @@
 *  Version 1.0.3 - Added definitions for Tasmota Counters C1, C2, C3 and C4.
 *  Version 1.0.4 - Corrects error when doing TasmotaInjectRule caused by lack of "SWITCH" handling in statusResponse().
 *  Version 1.0.5 - Adds support for OBIS power monitoring sensor.
+*  Version 1.0.6 - Adds trigger support for OBIS power monitoring sensor.
 *
 * Authors Notes:
 * For more information on Tasmota Sync drivers check out these resources:
@@ -49,7 +50,7 @@
 * Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 * Tasmota Sync Sensor Driver https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Sensor%20Documentation.pdf
 *
-*  Gary Milne - March 11th, 2024
+*  Gary Milne - March 14th, 2024
 *
 **/
 
@@ -125,7 +126,8 @@ sensorType = "All"
                                            //NFC. Note that data is also a part of NFC but has already been defined elsewhere.
                                            'ACTIVE', 'FLOWRATE',  //Rain. Note that event and total are also part of RAIN but are defined elsewhere.
                                            'PULSE', //RF sensor. Note that data, bits and protocol are all defined elsewhere. 
-                                            'C1', 'C2','C3','C4'  //These are the variables used for Tasmota counters.
+                                            'C1', 'C2','C3','C4',  //These are the variables used for Tasmota counters.
+                                            'TOTAL_OUT', 'TOTAL_IN', 'POWER_CURR'  //Trigger support for OBIS power monitoring
                                            ]
 
 //First item in the pair is the name of the Tasmota sensor data type in uppercase form. The second name is the name of the driver unit attribute for that type of data.  For example 'tempUnit' will contain either a 'C' or 'F' if temperature is a valid data field.
