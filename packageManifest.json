@@ -4,7 +4,7 @@
   "version": "138",
   "minimumHEVersion": "2.2.9",
   "dateReleased": "2024-19-03",
-  "releaseNotes": "Package-138: Improves on/off handling for power relays. Package-137: Adds OBIS power monitoring values to the Universal Multi-Sensor Trigger Eligibility list.\nPackage-136: Adds support for OBIS energy monitoring driver to Universal_Multi_Sensor.\n Adds ability for multi-relays to optionally create child devices. V1.3.4 fixes a bug in power profile switches.",
+  "releaseNotes": "Package-138: Improves on/off handling for power relays.\nPackage-137: Adds OBIS power monitoring values to the Universal Multi-Sensor Trigger Eligibility list.\nPackage-136: Adds support for OBIS energy monitoring driver to Universal_Multi_Sensor.\n Adds ability for multi-relays to optionally create child devices. V1.3.4 fixes a bug in power profile switches.",
   "communityLink": "https://community.hubitat.com/t/tasmota-sync-drivers-native-and-real-time-synchronization-between-hubitat-and-tasmota-11/93651",
   "documentationLink": "https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf",
   "apps": [
