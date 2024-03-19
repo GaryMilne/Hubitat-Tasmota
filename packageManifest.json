@@ -1,0 +1,219 @@
+{
+  "packageName": "Tasmota Sync Drivers",
+  "author": "Gary J. Milne",
+  "version": "138",
+  "minimumHEVersion": "2.2.9",
+  "dateReleased": "2024-19-03",
+  "releaseNotes": "Package-138: Improves on/off handling for power relays.\nPackage-137: Adds OBIS power monitoring values to the Universal Multi-Sensor Trigger Eligibility list.\nPackage-136: Adds support for OBIS energy monitoring driver to Universal_Multi_Sensor.\n Adds ability for multi-relays to optionally create child devices. V1.3.4 fixes a bug in power profile switches.",
+  "communityLink": "https://community.hubitat.com/t/tasmota-sync-drivers-native-and-real-time-synchronization-between-hubitat-and-tasmota-11/93651",
+  "documentationLink": "https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf",
+  "apps": [
+    {
+      "id": "16c0dc99-87a1-4ac5-99d1-b34ca8e2fd95",
+      "name": "Tasmota Sync Broadcaster",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Broadcaster.groovy",
+      "required": false,
+      "oauth": false,
+      "primary": false,
+      "version": "1.1.4",
+      "categories": [
+        "Integrations"
+      ],
+      "tags": [
+        "Tasmota"
+      ]
+    }
+  ],
+  "drivers": [
+    {
+      "id": "865b186a-f150-4dad-9206-3faa7ceffc65",
+      "name": "Tasmota Sync - Color Bulb",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Color_Bulb.groovy",
+      "description": "Tasmota Sync driver for color bulb, also supports CT mode. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
+      "required": false,
+      "version": "1.0.1",
+      "categories": [
+        "Integrations"
+      ],
+      "tags": [
+        "Lights & Switches",
+        "Tasmota"
+      ]
+    },
+    {
+      "id": "e76a3277-20d3-42c0-a70d-668ff54bd610",
+      "name": "Tasmota Sync - Dimmer Switch",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dimmer_Switch.groovy",
+      "description": "Tasmota Sync driver for dimmer switch. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
+      "required": false,
+      "version": "1.0.1",
+      "categories": [
+        "Integrations"
+      ],
+      "tags": [
+        "Lights & Switches",
+        "Tasmota"
+      ]
+    },
+    {
+      "id": "70df6bd5-cc59-41fe-9ebd-e26a9313f0b1",
+      "name": "Tasmota Sync - Dual Relay/Switch/Plug",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Dual_Relay_Switch_Plug.groovy",
+      "description": "Tasmota Sync driver for Dual Relay/Switch/Plug with optional Energy Monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
+      "required": false,
+      "version": "1.3.5",
+      "categories": [
+        "Integrations"
+      ],
+      "tags": [
+        "Lights & Switches",
+        "Misc. Devices",
+        "Energy Monitoring",
+        "Tasmota"
+      ]
+    },
+    {
+      "id": "e3f1cfd1-9a9d-4d87-8a7c-4f5ee43aac4b",
+      "name": "Tasmota Sync - Fan",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Fan.groovy",
+      "description": "Tasmota Sync driver for fan with switch. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
+      "required": false,
+      "version": "1.0.2",
+      "categories": [
+        "Integrations"
+      ],
+      "tags": [
+        "Lights & Switches",
+        "Misc. Devices",
+        "Tasmota"
+      ]
+    },
+    {
+      "id": "4818eca9-8ebe-46dc-86ee-0131b04407af",
+      "name": "Tasmota Sync - Single Relay/Switch/Plug",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Single_Relay_Switch_Plug.groovy",
+      "description": "Tasmota Sync driver for Dual Relay/Switch/Plug with optional Energy Monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
+      "required": false,
+      "version": "1.3.5",
+      "categories": [
+        "Integrations"
+      ],
+      "tags": [
+        "Lights & Switches",
+        "Energy Monitoring",
+        "Tasmota"
+      ]
+    },
+    {
+      "id": "b5cef666-2681-45c6-a467-d889a036bc22",
+      "name": "Tasmota Sync - Eight Relay/Switch/Plug",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Eight_Relay_Switch_Plug.groovy",
+      "description": "Tasmota Sync driver for Eight Relay/Switch/Plug, no Energy Monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
+      "required": false,
+      "version": "1.3.5",
+      "categories": [
+        "Integrations"
+      ],
+      "tags": [
+        "Lights & Switches",
+        "Misc. Devices",
+        "Tasmota"
+      ]
+    },
+    {
+      "id": "a56a3983-dfca-4826-a146-45680190f22d",
+      "name": "Tasmota Sync - Triple Relay/Switch/Plug",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Triple_Relay_Switch_Plug.groovy",
+      "description": "Tasmota Sync driver for Triple Relay/Switch/Plug, no Energy Monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
+      "required": false,
+      "version": "1.3.5",
+      "categories": [
+        "Integrations"
+      ],
+      "tags": [
+        "Lights & Switches",
+        "Misc. Devices",
+        "Tasmota"
+      ]
+    },
+    {
+      "id": "e16c85b3-3f3e-43b4-8208-70d4fd5f3057",
+      "name": "Tasmota Sync - Quad Relay/Switch/Plug",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Quad_Relay_Switch_Plug.groovy",
+      "description": "Tasmota Sync driver for Quad Relay/Switch/Plug, no Energy Monitoring. Provides native and realtime synchronization with standard Tasmota 11 or greater. Polling available for earlier versions.",
+      "required": false,
+      "version": "1.3.5",
+      "categories": [
+        "Integrations"
+      ],
+      "tags": [
+        "Lights & Switches",
+        "Misc. Devices",
+        "Tasmota"
+      ]
+    },
+    {
+      "id": "481a23e4-b16e-499d-b0bd-fa34881146e0",
+      "name": "Tasmota Sync - Universal Multi Sensor",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor.groovy",
+      "required": false,
+      "version": "1.0.5",
+      "categories": [
+        "Integrations"
+      ],
+      "tags": [
+        "Tasmota",
+        "Air Quality",
+        "Energy",
+        "Environmental",
+        "Misc Devices"
+      ]
+    },
+    {
+      "id": "f7e48931-9004-4b4d-a61a-cc3c87bf5c1d",
+      "name": "Tasmota Sync - Universal Multi Sensor Single Relay",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Single_Relay.groovy",
+      "required": false,
+      "version": "1.0.5",
+      "categories": [
+        "Integrations"
+      ],
+      "tags": [
+        "Tasmota",
+        "Air Quality",
+        "Energy",
+        "Environmental",
+        "Misc Devices"
+      ]
+    },
+    {
+      "id": "36d054fd-5605-47b6-9503-62f2547ed033",
+      "name": "Tasmota Sync - Universal Multi Sensor Double Relay",
+      "namespace": "garyjmilne",
+      "location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Tasmota/main/Universal_Multi_Sensor_Double_Relay.groovy",
+      "required": false,
+      "version": "1.0.5",
+      "categories": [
+        "Integrations"
+      ],
+      "tags": [
+        "Tasmota",
+        "Air Quality",
+        "Energy",
+        "Environmental",
+        "Misc Devices"
+      ]
+    }
+  ]
+}

@@ -43,7 +43,7 @@
 *  How to upgrade from Tasmota 8.X to Tasmota 11.X  https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/How%20to%20Upgrade%20from%20Tasmota%20from%208.X%20to%2011.X.pdf
 *  Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 *
-*  Gary Milne - March 19, 2024
+*  Gary Milne - March 19, 2024 @ 10:52 AM
 *
 **/
 
@@ -169,6 +169,7 @@ def initialize(){
         state.relayType = "Simple switch"
         log("Initialize", "Configured as simple switch. No power monitoring information.", 0)
         device.deleteCurrentState("current")
+        device.deleteCurrentState("amperage")
         device.deleteCurrentState("voltage")
         device.deleteCurrentState("power")
         device.deleteCurrentState("apparentPower")
@@ -1696,9 +1697,15 @@ def updateChild(String ep, String status)
         }
     else sendEvent(name: "switch"+ep, value: status, descriptionText: "The switch ${ep} has been turned ${status}", isStateChange: false)
     
-    //Force the Power stats to refresh 1 second after a power on, or to 0 immediately on a power off. What gets reset depends on the User selected power monitoring level.
-    if (status == 'on') runIn 1, 'refresh'
-    else {
+    //Going from off to on. Force the Power stats to refresh 1 second after a change in state from off to on. 
+    if ( status == 'on' && device.currentValue("switch") == 'off' &&  device.currentValue("switch1") == 'off' ) { 
+            def parameters = ["STATUS","8"]
+            //Don't run the command until after the debounce window has closed or it will be ignored.
+            runInMillis(settings.debounce - remainingTime() + 100, "callTasmota", [data:parameters])
+    }
+    
+    //Going from on to off. Set the power stats to 0. What gets reset depends on the User selected power monitoring level.
+    if ( status == 'off' && device.currentValue("switch") == 'on' &&  device.currentValue("switch1") == 'on' ) { 
         if (settings.relayType.toInteger() >= 1 ) sendEvent name: "power", value: 0, descriptionText: "'power' has been reset"
         if (settings.relayType.toInteger() >= 2 ) sendEvent name: "current", value: 0, descriptionText: "'current' has been reset"
         if (settings.relayType.toInteger() >= 3 ) {
