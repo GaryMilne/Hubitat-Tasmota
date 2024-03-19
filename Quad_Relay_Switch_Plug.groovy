@@ -1,6 +1,5 @@
 /**
 *  Tasmota Sync N Port Relay\Switch\Plug Driver with PM
-*  Version: v1.3.4
 *  Download: See importUrl in definition
 *  Description: Hubitat Driver for Tasmota N Port Relay\Switch\Plug with\without Power Monitoring. Provides Realtime and native synchronization between Hubitat and Tasmota.
 *  The N port version handles any number of switches from 1 to 8. The SINGLE, DUAL, TRIPLE, QUAD and EIGHT port relay/switch/plug are all simply copies of this driver with the following adjustment.
@@ -36,6 +35,7 @@
 *  Version 1.3.2 - Fixed bug in state handling of some relay devices. Left 'test()' function enabled to allow correct setting of "useChildDevices" to be set on existing installed devices. Incremented Core to 0.98.4. 
 *  Version 1.3.3 - Moved all Child Device code to core. Incremented Core to 0.98.5
 *  Version 1.3.4 - Fixed bug introduced in the 1.3.X timeframe whereby selection of a different relayType was not possible. Added clearing of "energy" stat.
+*  Version 1.3.5 - Changes to updateChild() for improved behaviour during on/off events.
 *
 *  Authors Notes:
 *  For more information on Tasmota Sync drivers check out these resources:
@@ -43,7 +43,7 @@
 *  How to upgrade from Tasmota 8.X to Tasmota 11.X  https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/How%20to%20Upgrade%20from%20Tasmota%20from%208.X%20to%2011.X.pdf
 *  Tasmota Sync Installation and Use Guide https://github.com/GaryMilne/Hubitat-Tasmota/blob/main/Tasmota%20Sync%20Documentation.pdf
 *
-*  Gary Milne - March 31, 2023
+*  Gary Milne - March 19, 2024
 *
 **/
 
@@ -1691,10 +1691,22 @@ def updateChild(String ep, String status)
     //log.info ("ep is: ${ep} and status is: ${status}")
     //If this is the first port we have to handle both the switch and switch1 attributes as though they are one.
     if (ep == "1") {
-        sendEvent(name: "switch", value: status, descriptionText: "'switch' has been turned ${status}", isStateChange: true)
+        sendEvent(name: "switch", value: status, descriptionText: "'switch' has been turned ${status}", isStateChange: false)
         sendEvent(name: "switch1", value: status, descriptionText: "'switch${ep}' has been turned ${status}", isStateChange: false)
         }
-    else sendEvent(name: "switch"+ep, value: status, descriptionText: "The switch ${ep} has been turned ${status}", isStateChange: true)
+    else sendEvent(name: "switch"+ep, value: status, descriptionText: "The switch ${ep} has been turned ${status}", isStateChange: false)
+    
+    //Force the Power stats to refresh 1 second after a power on, or to 0 immediately on a power off. What gets reset depends on the User selected power monitoring level.
+    if (status == 'on') runIn 1, 'refresh'
+    else {
+        if (settings.relayType.toInteger() >= 1 ) sendEvent name: "power", value: 0, descriptionText: "'power' has been reset"
+        if (settings.relayType.toInteger() >= 2 ) sendEvent name: "current", value: 0, descriptionText: "'current' has been reset"
+        if (settings.relayType.toInteger() >= 3 ) {
+            sendEvent name: "apparentPower", value: 0, descriptionText: "'apparentPower' has been reset"
+            sendEvent name: "powerFactor", value: 0, descriptionText: "'powerFactor' has been reset"
+            sendEvent name: "reactivePower", value: 0, descriptionText: "'reactivePower' has been reset"
+            }    
+        }
         
 	//Skip over child devices if they are not in use.
 	if (state.useChildDevices == false ) return
