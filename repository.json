@@ -38,6 +38,20 @@
 			]
 		},
 		{
+			"name": "Remote Builder for Hubitat",
+			"category": "Convenience",
+			"location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-TileBuilder/main/packageManifestRemoteBuilder.json",
+			"description": "Create virtual remotes to control devices around the home from any device, with or without using the Hubitat Dashboard.",
+			"tags": [
+				"Convenience",
+				"Buttons",
+				"Multimedia",
+				"Integrations",
+				"Utilities",
+				"Dashboards"
+			]
+		},
+		{
 			"name": "Zigbee Monitor Driver",
 			"category": "Zigbee",
 			"location": "https://raw.githubusercontent.com/GaryMilne/Hubitat-Zigbee/main/packageManifestZigbee.json",
